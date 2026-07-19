@@ -54,25 +54,25 @@ export default function Home() {
 
   function requestFanvue() {
     setGateOpen(true);
+
+    if (isInAppBrowser()) {
+      // The in-app variant of the age gate has no confirm button — it
+      // goes straight to "Open in External Browser" instructions — so
+      // mark the URL right away instead of waiting for a click that
+      // doesn't exist in that view. Once the person manually escapes to
+      // Safari, the effect above picks up this flag and continues to
+      // Fanvue automatically.
+      track("fanvue");
+      window.history.replaceState(null, "", "?go=fanvue");
+    }
   }
 
   function confirmFanvue() {
+    // Only reachable from the real-browser variant of the age gate,
+    // which has an actual confirm button — safe to open directly here,
+    // no in-app-browser trap to worry about.
     track("fanvue");
     setGateOpen(false);
-
-    if (isInAppBrowser()) {
-      // Do NOT attempt to open Fanvue directly here — that's what was
-      // opening it inside Instagram's own browser instead of Safari.
-      // The only path out is the manual "Open in External Browser" step
-      // shown in the instructions. We just mark the URL so that once the
-      // person does that, the effect above picks up the flag and
-      // continues to Fanvue automatically in the real browser.
-      window.history.replaceState(null, "", "?go=fanvue");
-      return;
-    }
-
-    // Already in a real browser (not Instagram's in-app one) — safe to
-    // open directly, no in-app-browser trap to worry about here.
     openExternal(LINKS.fanvue);
   }
 
