@@ -295,53 +295,66 @@ function AboutPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
   return (
     <AnimatePresence>
       {open && (
-        <motion.div
-          initial={{ x: "100%" }}
-          animate={{ x: 0 }}
-          exit={{ x: "100%" }}
-          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="fixed inset-y-0 right-0 z-[60] w-[92%] max-w-lg overflow-y-auto bg-red px-6 pb-10 pt-6"
-        >
-          <button
+        <>
+          {/* Full-screen tap-catcher, sits behind the panel — covers the
+              sliver of background still visible on the left while the
+              panel is open, so a tap there also closes it. */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[59]"
             onClick={onClose}
-            className="font-display text-sm text-black active:opacity-60"
+          />
+          <motion.div
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            onClick={onClose}
+            className="fixed inset-y-0 right-0 z-[60] w-[92%] max-w-lg overflow-y-auto bg-red px-6 pb-10 pt-6"
           >
-            [ &times; ]
-          </button>
+            <button
+              onClick={onClose}
+              className="font-display text-sm text-black active:opacity-60"
+            >
+              [ &times; ]
+            </button>
 
-          <h2 className="font-display mt-6 text-5xl font-black uppercase leading-[0.95] text-black">
-            Levity
-            <br />
-            Pavic
-          </h2>
+            <h2 className="font-display mt-6 text-5xl font-black uppercase leading-[0.95] text-black">
+              Levity
+              <br />
+              Pavic
+            </h2>
 
-          <div className="mt-8 aspect-[3/4] w-full overflow-hidden bg-black/20">
-            <ImageSlot
-              src="/images/about-portrait.jpg"
-              alt="Levity Pavic"
-              label="portrait photo"
-            />
-          </div>
+            <div className="mt-8 aspect-[3/4] w-3/5 max-w-[260px] overflow-hidden bg-black/20">
+              <ImageSlot
+                src="/images/about-portrait.jpg"
+                alt="Levity Pavic"
+                label="portrait photo"
+              />
+            </div>
 
-          <p className="font-display mt-8 text-base leading-relaxed text-black">
-            Born and raised in Brooklyn and now living in SoHo, I am a
-            21-year-old former professional K1 kickboxer who translates the
-            rigorous discipline of elite athletics into everything I do.
-            Having competed and won at both the amateur and professional
-            levels of my sport, I maintain a deep connection to athletic
-            analysis and high-level conditioning, structuring my daily life
-            around intensive training.
-          </p>
-          <p className="font-display mt-4 text-base leading-relaxed text-black">
-            Beyond the gym, I bring a sharp, analytical focus to my personal
-            pursuits. I am a dedicated motorcyclist with a strong command of
-            mechanical engineering, an avid follower of modern tattoo
-            artistry and technique, and a connoisseur of underground
-            electronic music and cinema. Driven by direct communication and
-            a focus on precision, I am currently leveraging my competitive
-            background to build new professional avenues in New York City.
-          </p>
-        </motion.div>
+            <p className="font-hanken mt-8 text-base leading-relaxed text-black">
+              Born and raised in Brooklyn and now living in SoHo, I am a
+              21-year-old former professional K1 kickboxer who translates the
+              rigorous discipline of elite athletics into everything I do.
+              Having competed and won at both the amateur and professional
+              levels of my sport, I maintain a deep connection to athletic
+              analysis and high-level conditioning, structuring my daily life
+              around intensive training.
+            </p>
+            <p className="font-hanken mt-4 text-base leading-relaxed text-black">
+              Beyond the gym, I bring a sharp, analytical focus to my personal
+              pursuits. I am a dedicated motorcyclist with a strong command of
+              mechanical engineering, an avid follower of modern tattoo
+              artistry and technique, and a connoisseur of underground
+              electronic music and cinema. Driven by direct communication and
+              a focus on precision, I am currently leveraging my competitive
+              background to build new professional avenues in New York City.
+            </p>
+          </motion.div>
+        </>
       )}
     </AnimatePresence>
   );
