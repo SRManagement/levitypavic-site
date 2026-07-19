@@ -292,7 +292,7 @@ function LinkWord({
   return (
     <button
       onClick={onClick}
-      className={`font-display ease-premium text-4xl font-bold uppercase leading-[1.05] tracking-tight transition-colors sm:text-5xl ${
+      className={`font-display ease-premium text-3xl font-bold uppercase leading-[1.05] tracking-tight transition-colors sm:text-5xl ${
         accent ? "text-red" : "text-cream active:text-red"
       }`}
     >
