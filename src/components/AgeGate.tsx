@@ -6,10 +6,12 @@ import { isInAppBrowser } from "@/lib/browser";
 
 export default function AgeGate({
   open,
+  almostThere = false,
   onConfirm,
   onCancel,
 }: {
   open: boolean;
+  almostThere?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
@@ -47,7 +49,7 @@ export default function AgeGate({
               id="age-gate-title"
               className="font-display mt-2 text-lg font-bold uppercase tracking-wide text-cream"
             >
-              adults-only content ahead
+              {almostThere ? "almost there" : "adults-only content ahead"}
             </h2>
 
             {inApp ? (
