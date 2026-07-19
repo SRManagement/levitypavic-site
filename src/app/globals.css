@@ -38,6 +38,12 @@ body {
   font-family: "SF Mono", SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
 }
 
+/* Hanken Grotesk — a real, freely-licensed Google Font, used for the
+   About Me bio body text. */
+.font-hanken {
+  font-family: var(--font-hanken), sans-serif;
+}
+
 /* Difference-blend text reveal: wherever this text overlaps the video/
    image behind it, the browser inverts the color at that pixel. Warm
    skin tones invert toward blue/cyan automatically — no color forcing
