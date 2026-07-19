@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Hanken_Grotesk } from "next/font/google";
 import "./globals.css";
-import InAppBrowserBanner from "@/components/InAppBrowserBanner";
 
 const hankenGrotesk = Hanken_Grotesk({
   variable: "--font-hanken",
@@ -22,7 +21,6 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${hankenGrotesk.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
-        <InAppBrowserBanner />
         {children}
       </body>
     </html>
