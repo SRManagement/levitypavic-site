@@ -36,14 +36,15 @@ export default function Home() {
   const [gateOpen, setGateOpen] = useState(false);
 
   // If someone manually escaped Instagram's in-app browser via "Open in
-  // External Browser" after already confirming they want Fanvue, this
-  // picks up on load (now in a real browser) and continues automatically
-  // — no second tap needed. See confirmFanvue() for where the flag gets set.
+  // External Browser" after already starting the Fanvue flow, this picks
+  // up on load (now in a real browser) and automatically pops the age
+  // confirmation back up — so they just tap "continue" once, without
+  // needing to find and re-tap Unlock/the portrait from scratch.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("go") === "fanvue" && !isInAppBrowser()) {
       window.history.replaceState(null, "", window.location.pathname);
-      openExternal(LINKS.fanvue);
+      setGateOpen(true);
     }
   }, []);
 
