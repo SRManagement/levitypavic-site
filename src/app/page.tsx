@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, useAnimationControls } from "framer-motion";
 import Reveal from "@/components/Reveal";
 import AgeGate from "@/components/AgeGate";
 import ImageSlot from "@/components/ImageSlot";
@@ -60,21 +60,20 @@ export default function Home() {
 
       {/* intro */}
       <div className="w-full max-w-sm text-left">
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.6 }}
-          className="font-mono text-[13px] leading-relaxed text-pink"
-        >
-          explore Levity&apos;s world — exclusive content, lifestyle
-          updates, favorite links and more 💋
-        </motion.p>
+        <TypewriterText
+          text={"explore Levity's world — exclusive content, lifestyle updates, favorite links and more\u00A0💋"}
+          className="font-mono text-[12px] leading-relaxed text-pink"
+        />
       </div>
 
       {/* polaroid + unlock card, stacked */}
       <div className="mt-8 flex w-full max-w-sm flex-col gap-8">
-        <Reveal delay={0.05}>
-          <div className="polaroid-grid mx-auto w-[240px] rounded-[20px] p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.45)]">
+        <motion.div
+          initial={{ rotate: 7, y: 14, opacity: 0 }}
+          animate={{ rotate: 0, y: 0, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 240, damping: 16, delay: 0.15 }}
+          className="polaroid-grid mx-auto w-[240px] rounded-[20px] p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.45)]"
+        >
             <PolaroidPhoto onClick={requestFanvue} />
             <div className="px-1.5 pb-1 pt-3">
               <p className="font-condensed text-xl text-pink">
@@ -98,47 +97,51 @@ export default function Home() {
                 </button>
               </div>
             </div>
-          </div>
-        </Reveal>
+        </motion.div>
 
-        <Reveal delay={0.15}>
-          <button
+        <div className="relative">
+          <HookTag />
+          <motion.button
             onClick={requestFanvue}
+            initial={{ scaleX: 0.25, opacity: 0 }}
+            animate={{ scaleX: 1, opacity: 1 }}
+            transition={{ duration: 0.55, delay: 0.45, ease: [0.22, 1, 0.36, 1] }}
+            style={{ transformOrigin: "left center" }}
             className="group relative block aspect-[8/5] w-full overflow-hidden rounded-[24px] border border-white/10 text-left"
           >
-            <div className="absolute inset-0 bg-surface">
-              <ImageSlot
-                src="/images/cover.jpg"
-                alt="Levity Pavic"
-                label="cover photo"
-              />
-            </div>
-            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
-            <div className="absolute inset-0 flex flex-col justify-end p-5">
-              <p className="glow-text font-ornate flex items-center gap-2 text-2xl font-bold italic tracking-tight">
-                <LockIcon size={18} /> Private Access
-              </p>
-              <p className="mt-2 text-sm text-cream/90">
-                exclusive content, BTS and more
-              </p>
-              <span className="glass-button mt-4 inline-flex w-fit items-center gap-2 rounded-full p-1.5 transition-transform group-active:scale-95">
-                <span
-                  className="rounded-full px-5 py-2 text-sm font-bold uppercase tracking-wide text-white"
-                  style={{
-                    background:
-                      "linear-gradient(135deg, rgba(255,255,255,0.4), rgba(255,140,185,0.65))",
-                  }}
-                >
-                  Unlock
+              <div className="absolute inset-0 bg-surface">
+                <ImageSlot
+                  src="/images/cover.jpg"
+                  alt="Levity Pavic"
+                  label="cover photo"
+                />
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
+              <div className="absolute inset-0 flex flex-col justify-end p-5">
+                <p className="glow-text font-ornate flex items-center gap-2 text-2xl font-bold italic tracking-tight">
+                  <LockIcon size={18} /> Private Access
+                </p>
+                <p className="mt-2 text-sm text-cream/90">
+                  exclusive content, BTS and more
+                </p>
+                <span className="glass-button mt-4 inline-flex w-fit items-center gap-2 rounded-full p-1.5 transition-transform group-active:scale-95">
+                  <span
+                    className="rounded-full px-5 py-2 text-sm font-bold uppercase tracking-wide text-white"
+                    style={{
+                      background:
+                        "linear-gradient(135deg, rgba(255,255,255,0.4), rgba(255,140,185,0.65))",
+                    }}
+                  >
+                    Unlock
+                  </span>
+                  <span className="text-base">💖</span>
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
+                    <ArrowIcon color="#fff" />
+                  </span>
                 </span>
-                <span className="text-base">💖</span>
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
-                  <ArrowIcon color="#fff" />
-                </span>
-              </span>
-            </div>
-          </button>
-        </Reveal>
+              </div>
+          </motion.button>
+        </div>
       </div>
 
       {/* link list */}
@@ -202,6 +205,127 @@ export default function Home() {
         </p>
       </Reveal>
     </main>
+  );
+}
+
+function TypewriterText({
+  text,
+  className,
+}: {
+  text: string;
+  className?: string;
+}) {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    setCount(0);
+    let i = 0;
+    const interval = setInterval(() => {
+      i++;
+      setCount(i);
+      if (i >= text.length) clearInterval(interval);
+    }, 22);
+    return () => clearInterval(interval);
+  }, [text]);
+
+  return (
+    <p className={className}>
+      {text.slice(0, count)}
+      <span className="typewriter-cursor">|</span>
+    </p>
+  );
+}
+
+function HookTag() {
+  const ref = useRef<HTMLDivElement>(null);
+  const controls = useAnimationControls();
+  const hasPlayed = useRef(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !hasPlayed.current) {
+          hasPlayed.current = true;
+          controls
+            .start({
+              rotate: 0,
+              y: 0,
+              opacity: 1,
+              transition: { type: "spring", stiffness: 260, damping: 9, delay: 0.2 },
+            })
+            .then(() => {
+              controls.start({
+                rotate: [0, 5, -4, 3, -2, 0],
+                transition: {
+                  duration: 4.5,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                },
+              });
+            });
+        }
+      },
+      { threshold: 0.4 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [controls]);
+
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ rotate: -35, y: -55, opacity: 0 }}
+      animate={controls}
+      style={{ transformOrigin: "88% 8%" }}
+      className="pointer-events-none absolute -right-3 -top-4 z-20 w-[104px] sm:w-[120px]"
+    >
+      <svg viewBox="0 0 140 100" className="w-full drop-shadow-[0_6px_14px_rgba(0,0,0,0.5)]">
+        {/* hook loop */}
+        <circle
+          cx="108"
+          cy="14"
+          r="13"
+          fill="none"
+          stroke="#0b0b0d"
+          strokeWidth="7"
+        />
+        {/* tag body */}
+        <path
+          d="M12,52 L52,12 Q56,8 62,8 L118,8 Q128,8 128,18 L128,80 Q128,90 118,90 L34,90 Q28,90 24,86 L12,64 Q8,58 12,52 Z"
+          fill="#0b0b0d"
+          stroke="#ff4d79"
+          strokeWidth="2"
+        />
+        {/* punch hole */}
+        <circle cx="108" cy="22" r="6" fill="#0b0b0d" stroke="#ff4d79" strokeWidth="2" />
+        <text
+          x="72"
+          y="55"
+          textAnchor="middle"
+          fontStyle="italic"
+          fontWeight="700"
+          fontSize="26"
+          fill="#ff4d79"
+          style={{ fontFamily: "var(--font-display), Georgia, serif" }}
+        >
+          65%
+        </text>
+        <text
+          x="72"
+          y="76"
+          textAnchor="middle"
+          fontStyle="italic"
+          fontWeight="700"
+          fontSize="18"
+          fill="#f5f3f1"
+          style={{ fontFamily: "var(--font-display), Georgia, serif" }}
+        >
+          off
+        </text>
+      </svg>
+    </motion.div>
   );
 }
 
