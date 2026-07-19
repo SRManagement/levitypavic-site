@@ -47,7 +47,6 @@ export default function Home() {
   function confirmFanvue() {
     track("fanvue");
     setGateOpen(false);
-    // small delay so the tap feels acknowledged before the app switch
     setTimeout(() => openExternal(LINKS.fanvue), 120);
   }
 
@@ -59,7 +58,6 @@ export default function Home() {
         onCancel={() => setGateOpen(false)}
       />
 
-      {/* intro */}
       <div className="w-full max-w-sm text-center">
         <motion.p
           initial={{ opacity: 0 }}
@@ -72,7 +70,6 @@ export default function Home() {
         </motion.p>
       </div>
 
-      {/* top card row: unlock card + polaroid */}
       <div className="mt-8 flex w-full max-w-sm flex-col items-center gap-6 sm:max-w-2xl sm:flex-row sm:items-start sm:justify-center">
         <Reveal delay={0.05}>
           <button
@@ -88,16 +85,14 @@ export default function Home() {
             </div>
             <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
             <div className="absolute inset-x-0 bottom-0 p-5">
-              <p className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.2em] text-pink">
-                <LockIcon /> private access
+              <p className="glow-text font-ornate flex items-center gap-2 text-2xl font-bold italic tracking-tight">
+                <LockIcon size={18} /> Private Access
               </p>
               <p className="mt-2 text-sm text-cream/90">
                 exclusive content, BTS and more
               </p>
-              <span className="mt-4 inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-xs font-semibold text-bg transition-transform group-active:scale-95"
-                style={{ background: "var(--pink)" }}
-              >
-                unlock <ArrowIcon />
+              <span className="glass-button mt-4 inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold uppercase tracking-wide text-white transition-transform group-active:scale-95">
+                unlock <ArrowIcon color="#fff" />
               </span>
             </div>
           </button>
@@ -113,7 +108,7 @@ export default function Home() {
               />
             </div>
             <div className="px-1.5 pb-1 pt-3">
-              <p className="text-base font-bold tracking-tight text-pink">
+              <p className="font-ornate text-base font-bold tracking-tight text-pink">
                 LEVITY PAVIC
               </p>
               <div className="mt-1 flex items-center justify-between">
@@ -138,7 +133,6 @@ export default function Home() {
         </Reveal>
       </div>
 
-      {/* link list */}
       <div className="mt-14 flex w-full max-w-sm flex-col gap-4">
         <LinkRow
           delay={0}
@@ -163,7 +157,6 @@ export default function Home() {
         />
       </div>
 
-      {/* feed strip */}
       <Reveal delay={0.1}>
         <div className="mt-16 w-full max-w-sm">
           <button
@@ -229,7 +222,7 @@ function LinkRow({
             <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-pink">
               link:
             </p>
-            <p className="text-lg font-bold uppercase tracking-tight text-cream">
+            <p className="font-ornate text-lg font-bold uppercase tracking-tight text-cream">
               {label}
             </p>
             <p className="mt-0.5 text-xs text-muted">{sub}</p>
@@ -245,17 +238,17 @@ function LinkRow({
   );
 }
 
-function ArrowIcon() {
+function ArrowIcon({ color = "var(--bg)" }: { color?: string }) {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--bg)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
       <path d="M9 6l6 6-6 6" />
     </svg>
   );
 }
 
-function LockIcon() {
+function LockIcon({ size = 12 }: { size?: number }) {
   return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <rect x="4" y="11" width="16" height="9" rx="2" />
       <path d="M8 11V7a4 4 0 1 1 8 0v4" />
     </svg>
