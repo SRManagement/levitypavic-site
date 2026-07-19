@@ -59,17 +59,20 @@ export default function Home() {
   function confirmFanvue() {
     track("fanvue");
     setGateOpen(false);
+
     if (isInAppBrowser()) {
-      // Mark the current URL so that if the person manually taps
-      // "Open in External Browser," this exact page reopens in Safari
-      // carrying the flag, and the effect above continues to Fanvue
-      // automatically once it detects it's no longer in an in-app browser.
+      // Do NOT attempt to open Fanvue directly here — that's what was
+      // opening it inside Instagram's own browser instead of Safari.
+      // The only path out is the manual "Open in External Browser" step
+      // shown in the instructions. We just mark the URL so that once the
+      // person does that, the effect above picks up the flag and
+      // continues to Fanvue automatically in the real browser.
       window.history.replaceState(null, "", "?go=fanvue");
+      return;
     }
-    // Must fire synchronously within the click, not delayed — iOS only
-    // hands off to Safari when the new-tab request is a direct, immediate
-    // result of the user's tap. Any setTimeout/async delay here silently
-    // breaks the breakout and it stays trapped in Instagram's browser.
+
+    // Already in a real browser (not Instagram's in-app one) — safe to
+    // open directly, no in-app-browser trap to worry about here.
     openExternal(LINKS.fanvue);
   }
 
