@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import Reveal from "@/components/Reveal";
 import AgeGate from "@/components/AgeGate";
 import ImageSlot from "@/components/ImageSlot";
-import { openExternal } from "@/lib/browser";
+import { openExternal, isInAppBrowser } from "@/lib/browser";
 
 type Platform = "fanvue" | "instagram" | "tiktok" | "snapchat";
 
@@ -35,6 +35,18 @@ function track(platform: Platform) {
 export default function Home() {
   const [gateOpen, setGateOpen] = useState(false);
 
+  // If someone manually escaped Instagram's in-app browser via "Open in
+  // External Browser" after already confirming they want Fanvue, this
+  // picks up on load (now in a real browser) and continues automatically
+  // — no second tap needed. See confirmFanvue() for where the flag gets set.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("go") === "fanvue" && !isInAppBrowser()) {
+      window.history.replaceState(null, "", window.location.pathname);
+      openExternal(LINKS.fanvue);
+    }
+  }, []);
+
   function goSocial(platform: Exclude<Platform, "fanvue">) {
     track(platform);
     openExternal(LINKS[platform]);
@@ -47,6 +59,13 @@ export default function Home() {
   function confirmFanvue() {
     track("fanvue");
     setGateOpen(false);
+    if (isInAppBrowser()) {
+      // Mark the current URL so that if the person manually taps
+      // "Open in External Browser," this exact page reopens in Safari
+      // carrying the flag, and the effect above continues to Fanvue
+      // automatically once it detects it's no longer in an in-app browser.
+      window.history.replaceState(null, "", "?go=fanvue");
+    }
     // Must fire synchronously within the click, not delayed — iOS only
     // hands off to Safari when the new-tab request is a direct, immediate
     // result of the user's tap. Any setTimeout/async delay here silently
@@ -219,22 +238,38 @@ function TypewriterText({
   className?: string;
 }) {
   const [count, setCount] = useState(0);
+  const [cursorVisible, setCursorVisible] = useState(true);
 
   useEffect(() => {
     setCount(0);
     let i = 0;
-    const interval = setInterval(() => {
+    const typing = setInterval(() => {
       i++;
       setCount(i);
-      if (i >= text.length) clearInterval(interval);
+      if (i >= text.length) clearInterval(typing);
     }, 34);
-    return () => clearInterval(interval);
+    return () => clearInterval(typing);
   }, [text]);
+
+  useEffect(() => {
+    const blink = setInterval(() => {
+      setCursorVisible((v) => !v);
+    }, 500);
+    return () => clearInterval(blink);
+  }, []);
 
   return (
     <p className={className}>
       {text.slice(0, count)}
-      <span className="typewriter-cursor">|</span>
+      <span
+        style={{
+          display: "inline-block",
+          marginLeft: "1px",
+          opacity: cursorVisible ? 1 : 0,
+        }}
+      >
+        |
+      </span>
     </p>
   );
 }
