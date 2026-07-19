@@ -92,7 +92,7 @@ export default function Home() {
                 exclusive content, BTS and more
               </p>
               <span className="glass-button mt-4 inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold uppercase tracking-wide text-white transition-transform group-active:scale-95">
-                unlock <ArrowIcon color="#fff" />
+                unlock 💖 <ArrowIcon color="#fff" />
               </span>
             </div>
           </button>
