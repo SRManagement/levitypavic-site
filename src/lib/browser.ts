@@ -43,11 +43,19 @@ export function openExternal(url: string) {
   }
 
   if (isIOS()) {
-    // iOS in-app webviews don't expose a reliable JS-only way to force
-    // Safari. We navigate directly, which works for most modern flows;
-    // callers should still show a "tap ••• → open in browser" hint as a
-    // fallback since it's not 100% guaranteed on every app version.
-    window.location.href = url;
+    // Instagram's iOS in-app browser doesn't implement its own handling
+    // for target="_blank" links — when a real anchor click requests a
+    // new tab, WebKit falls back to handing it off to Safari since
+    // there's nowhere else for it to go. A programmatic click on a real
+    // <a target="_blank"> element triggers that fallback; window.location
+    // does not, since it just navigates within the same webview.
+    const link = document.createElement("a");
+    link.href = url;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
     return;
   }
 
