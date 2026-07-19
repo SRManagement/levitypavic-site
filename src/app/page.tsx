@@ -38,11 +38,13 @@ export default function Home() {
   const [contactOpen, setContactOpen] = useState(false);
   const [showIntro, setShowIntro] = useState(true);
   const [revealed, setRevealed] = useState(false);
+  const [almostThere, setAlmostThere] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("go") === "fanvue" && !isInAppBrowser()) {
       window.history.replaceState(null, "", window.location.pathname);
+      setAlmostThere(true);
       setGateOpen(true);
     }
   }, []);
@@ -53,6 +55,7 @@ export default function Home() {
   }
 
   function requestFanvue() {
+    setAlmostThere(false);
     setGateOpen(true);
 
     if (isInAppBrowser()) {
@@ -69,6 +72,12 @@ export default function Home() {
 
   return (
     <main className="relative h-[100dvh] w-full overflow-hidden bg-bg">
+      {/* Preloads the About Me portrait in the background on first page
+          load, so it's already cached by the time someone taps About Me
+          — otherwise the browser only starts fetching it at that moment,
+          which is what caused the slow first-open on a cold cache. */}
+      <link rel="preload" as="image" href="/images/about-portrait.jpg" />
+
       {showIntro && (
         <IntroSequence
           onReveal={() => setRevealed(true)}
@@ -78,6 +87,7 @@ export default function Home() {
 
       <AgeGate
         open={gateOpen}
+        almostThere={almostThere}
         onConfirm={confirmFanvue}
         onCancel={() => setGateOpen(false)}
       />
@@ -132,7 +142,7 @@ export default function Home() {
           transition={{ type: "spring", stiffness: 420, damping: 30 }}
           className="flex flex-col items-center pb-2"
         >
-          <p className="font-mono mb-4 text-[11px] uppercase tracking-[0.35em] text-muted">
+          <p className="font-mono mb-4 text-[11px] uppercase tracking-[0.35em] text-[#b8b8b8]">
             All My Links
           </p>
           <div className="flex flex-col items-center">
@@ -324,7 +334,7 @@ function AboutPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
             <h2 className="font-display mt-6 text-5xl font-black uppercase leading-[0.95] text-black">
               Levity
               <br />
-              Pavic
+              Pavić
             </h2>
 
             <div className="mt-8 aspect-[3/4] w-3/5 max-w-[260px] overflow-hidden bg-black/20">
@@ -336,7 +346,7 @@ function AboutPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
             </div>
 
             <p className="font-hanken mt-8 text-base leading-relaxed text-black">
-              Born and raised in Brooklyn and now living in SoHo, I am a
+              Born and raised in Brooklyn and now living in SoHo, NYC. I am a
               21-year-old former professional K1 kickboxer who translates the
               rigorous discipline of elite athletics into everything I do.
               Having competed and won at both the amateur and professional
