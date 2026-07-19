@@ -18,7 +18,7 @@ export default function ImageSlot({
   if (failed) {
     return (
       <div
-        className={`flex items-center justify-center bg-surface-2 ${className}`}
+        className={`flex items-center justify-center bg-white/5 ${className}`}
       >
         <span className="px-3 text-center text-[10px] leading-relaxed text-muted">
           {label}
