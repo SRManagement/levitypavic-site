@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import Reveal from "@/components/Reveal";
 import AgeGate from "@/components/AgeGate";
@@ -111,16 +111,10 @@ export default function Home() {
         </Reveal>
 
         <Reveal delay={0.15}>
-          <div className="w-[240px] rounded-[20px] bg-white p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.45)]">
-            <div className="relative h-[260px] w-full overflow-hidden rounded-[14px] bg-surface-2">
-              <ImageSlot
-                src="/images/portrait.jpg"
-                alt="Levity Pavic portrait"
-                label="portrait photo"
-              />
-            </div>
+          <div className="polaroid-grid w-[240px] rounded-[20px] p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.45)]">
+            <PolaroidPhoto />
             <div className="px-1.5 pb-1 pt-3">
-              <p className="font-ornate text-base font-bold tracking-tight text-pink">
+              <p className="font-condensed text-xl text-pink">
                 LEVITY PAVIC
               </p>
               <div className="mt-1 flex items-center justify-between">
@@ -204,6 +198,39 @@ export default function Home() {
         </p>
       </Reveal>
     </main>
+  );
+}
+
+function PolaroidPhoto() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [centered, setCentered] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setCentered(entry.isIntersecting),
+      { rootMargin: "-40% 0px -40% 0px", threshold: 0 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      className="group relative aspect-square w-full overflow-hidden rounded-[14px] bg-surface-2"
+    >
+      <ImageSlot
+        src="/images/portrait.jpg"
+        alt="Levity Pavic portrait"
+        label="portrait photo"
+        className={`transition-[filter] duration-700 ease-out group-hover:grayscale-0 group-hover:saturate-125 ${
+          centered ? "grayscale-0 saturate-125" : "grayscale"
+        }`}
+      />
+      <div className="grain pointer-events-none absolute inset-0" />
+    </div>
   );
 }
 
