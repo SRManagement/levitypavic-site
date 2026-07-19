@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+import { motion } from "framer-motion";
+import Reveal from "@/components/Reveal";
 import AgeGate from "@/components/AgeGate";
-import VideoSlot from "@/components/VideoSlot";
 import ImageSlot from "@/components/ImageSlot";
 import { openExternal, isInAppBrowser } from "@/lib/browser";
 
@@ -34,11 +34,12 @@ function track(platform: Platform) {
 
 export default function Home() {
   const [gateOpen, setGateOpen] = useState(false);
-  const [aboutOpen, setAboutOpen] = useState(false);
-  const [contactOpen, setContactOpen] = useState(false);
-  const [showIntro, setShowIntro] = useState(true);
-  const [revealed, setRevealed] = useState(false);
 
+  // If someone manually escaped Instagram's in-app browser via "Open in
+  // External Browser" after already starting the Fanvue flow, this picks
+  // up on load (now in a real browser) and automatically pops the age
+  // confirmation back up — so they just tap "continue" once, without
+  // needing to find and re-tap Unlock/the portrait from scratch.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("go") === "fanvue" && !isInAppBrowser()) {
@@ -56,346 +57,350 @@ export default function Home() {
     setGateOpen(true);
 
     if (isInAppBrowser()) {
+      // The in-app variant of the age gate has no confirm button — it
+      // goes straight to "Open in External Browser" instructions — so
+      // mark the URL right away instead of waiting for a click that
+      // doesn't exist in that view. Once the person manually escapes to
+      // Safari, the effect above picks up this flag and continues to
+      // Fanvue automatically.
       track("fanvue");
       window.history.replaceState(null, "", "?go=fanvue");
     }
   }
 
   function confirmFanvue() {
+    // Only reachable from the real-browser variant of the age gate,
+    // which has an actual confirm button — safe to open directly here,
+    // no in-app-browser trap to worry about.
     track("fanvue");
     setGateOpen(false);
     openExternal(LINKS.fanvue);
   }
 
   return (
-    <main className="relative h-[100dvh] w-full overflow-hidden bg-bg">
-      {showIntro && (
-        <IntroSequence
-          onReveal={() => setRevealed(true)}
-          onDone={() => setShowIntro(false)}
-        />
-      )}
-
+    <main className="relative flex w-full flex-col items-center bg-bg px-5 pb-24 pt-14">
       <AgeGate
         open={gateOpen}
         onConfirm={confirmFanvue}
         onCancel={() => setGateOpen(false)}
       />
-      <AboutPanel open={aboutOpen} onClose={() => setAboutOpen(false)} />
-      <ContactPopup open={contactOpen} onClose={() => setContactOpen(false)} />
 
-      {/* Background media */}
-      <div className="absolute inset-0">
-        <VideoSlot videoSrc="/videos/hero-bg.mp4" posterSrc="/images/hero-bg.jpg" />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/20 to-black/80" />
+      {/* intro */}
+      <div className="w-full max-w-sm text-left">
+        <TypewriterText
+          text={"explore Levity's world — exclusive content, lifestyle updates, favorite links and more\u00A0💋"}
+          className="font-mono text-[12px] leading-relaxed text-pink"
+        />
       </div>
 
-      {/* Wordmark — positioned against the full screen (matching <main>,
-          which is h-[100dvh]) so its coordinate system is identical to
-          the intro overlay's (also full-screen via fixed inset-0). If
-          this were nested inside the flex layout below instead, "20%
-          from the top" would mean two different actual pixel positions
-          in each case — which is exactly what caused the jump/relocate
-          bug. Kept as a sibling, not a child, of the flex content. */}
-      <div className="absolute left-1/2 top-[20%] z-10 w-[85vw] max-w-2xl -translate-x-1/2 -translate-y-1/2">
-        <Wordmark />
-      </div>
+      {/* polaroid + unlock card, stacked */}
+      <div className="mt-8 flex w-full max-w-sm flex-col gap-8">
+        <motion.div
+          initial={{ rotate: 7, y: 14, opacity: 0 }}
+          animate={{ rotate: 0, y: 0, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 240, damping: 16, delay: 0.15 }}
+          className="polaroid-grid mx-auto w-[240px] rounded-[20px] p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.45)]"
+        >
+            <PolaroidPhoto onClick={requestFanvue} />
+            <div className="px-1.5 pb-1 pt-3">
+              <p className="font-condensed text-xl text-pink">
+                LEVITY PAVIC
+              </p>
+              <div className="mt-1 flex items-center justify-between">
+                <p className="text-[11px] text-neutral-500">
+                  model · creator · muse
+                </p>
+                <p className="font-mono text-[11px] text-neutral-400">2026</p>
+              </div>
+              <div className="mt-3 flex items-center gap-4 border-t border-neutral-200 pt-3">
+                <button onClick={() => goSocial("instagram")} aria-label="instagram">
+                  <InstagramIcon color="#ff4d79" />
+                </button>
+                <button onClick={() => goSocial("tiktok")} aria-label="tiktok">
+                  <TikTokIcon color="#ff4d79" />
+                </button>
+                <button onClick={() => goSocial("snapchat")} aria-label="snapchat">
+                  <SnapchatIcon color="#ff4d79" />
+                </button>
+              </div>
+            </div>
+        </motion.div>
 
-      {/* Foreground layout */}
-      <div className="relative z-10 flex h-full w-full flex-col justify-between px-5 py-6">
-        <div className="flex w-full items-center justify-between">
+        <div className="relative">
           <motion.button
-            onClick={() => setAboutOpen(true)}
-            initial={{ x: "-120%", opacity: 0 }}
-            animate={revealed ? { x: 0, opacity: 1 } : {}}
-            transition={{ type: "spring", stiffness: 480, damping: 26 }}
-            className="font-display text-xs font-medium uppercase tracking-widest text-cream active:opacity-60"
+            onClick={requestFanvue}
+            initial={{ scaleX: 0.25, opacity: 0 }}
+            animate={{ scaleX: 1, opacity: 1 }}
+            transition={{ duration: 0.55, delay: 0.45, ease: [0.22, 1, 0.36, 1] }}
+            style={{ transformOrigin: "left center" }}
+            className="group relative block aspect-[8/5] w-full overflow-hidden rounded-[24px] border border-white/10 text-left"
           >
-            About Me
-          </motion.button>
-          <motion.button
-            onClick={() => setContactOpen(true)}
-            initial={{ x: "120%", opacity: 0 }}
-            animate={revealed ? { x: 0, opacity: 1 } : {}}
-            transition={{ type: "spring", stiffness: 480, damping: 26 }}
-            className="font-display text-xs font-medium uppercase tracking-widest text-cream active:opacity-60"
-          >
-            Contact
+              <div className="absolute inset-0 bg-surface">
+                <ImageSlot
+                  src="/images/cover.jpg"
+                  alt="Levity Pavic"
+                  label="cover photo"
+                />
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
+              <div className="absolute inset-0 flex flex-col justify-end p-5">
+                <p className="glow-text font-ornate flex items-center gap-2 text-2xl font-bold italic tracking-tight">
+                  <LockIcon size={18} /> Private Access
+                </p>
+                <p className="mt-2 text-sm text-cream/90">
+                  exclusive content, BTS and more
+                </p>
+                <span className="glass-button mt-4 inline-flex w-fit items-center gap-2 rounded-full p-1.5 transition-transform group-active:scale-95">
+                  <span
+                    className="rounded-full px-5 py-2 text-sm font-bold uppercase tracking-wide text-white"
+                    style={{
+                      background:
+                        "linear-gradient(135deg, rgba(255,255,255,0.4), rgba(255,140,185,0.65))",
+                    }}
+                  >
+                    Unlock
+                  </span>
+                  <span className="text-base">💖</span>
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
+                    <ArrowIcon color="#fff" />
+                  </span>
+                </span>
+              </div>
           </motion.button>
         </div>
-
-        <div className="flex-1" />
-
-        <motion.div
-          initial={{ y: "140%", opacity: 0 }}
-          animate={revealed ? { y: 0, opacity: 1 } : {}}
-          transition={{ type: "spring", stiffness: 420, damping: 30 }}
-          className="flex flex-col items-center pb-2"
-        >
-          <p className="font-mono mb-4 text-[11px] uppercase tracking-[0.35em] text-muted">
-            All My Links
-          </p>
-          <div className="flex flex-col items-center">
-            <LinkWord label="Exclusive Content" onClick={requestFanvue} accent />
-            <LinkWord label="Instagram" onClick={() => goSocial("instagram")} />
-            <LinkWord label="Snapchat" onClick={() => goSocial("snapchat")} />
-            <LinkWord label="TikTok" onClick={() => goSocial("tiktok")} />
-          </div>
-        </motion.div>
       </div>
+
+      {/* link list */}
+      <div className="mt-14 flex w-full max-w-sm flex-col gap-4">
+        <LinkRow
+          delay={0}
+          label="instagram"
+          sub="follow me here"
+          image="/images/link-instagram.jpg"
+          onClick={() => goSocial("instagram")}
+        />
+        <LinkRow
+          delay={0.08}
+          label="tiktok"
+          sub="just having fun"
+          image="/images/link-tiktok.jpg"
+          onClick={() => goSocial("tiktok")}
+        />
+        <LinkRow
+          delay={0.16}
+          label="snapchat"
+          sub="add me on snap!"
+          image="/images/link-snapchat.jpg"
+          onClick={() => goSocial("snapchat")}
+        />
+      </div>
+
+      {/* feed strip */}
+      <Reveal delay={0.1}>
+        <div className="mt-16 w-full max-w-sm">
+          <button
+            onClick={() => goSocial("instagram")}
+            className="mb-3 flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.2em] text-pink"
+          >
+            <InstagramIcon color="var(--pink)" size={16} /> current feed
+          </button>
+          <div className="grid grid-cols-3 gap-1.5">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, scale: 0.9 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true, margin: "-40px" }}
+                transition={{ duration: 0.4, delay: i * 0.05 }}
+                className="aspect-square overflow-hidden rounded-md bg-surface"
+              >
+                <ImageSlot
+                  src={`/images/feed-${i + 1}.jpg`}
+                  alt={`feed photo ${i + 1}`}
+                  label={`feed-${i + 1}.jpg`}
+                />
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </Reveal>
+
+      <Reveal delay={0.05}>
+        <p className="mt-16 font-mono text-[11px] tracking-wide text-muted">
+          @levitypavic
+        </p>
+      </Reveal>
     </main>
   );
 }
 
-function Wordmark() {
-  const [failed, setFailed] = useState(false);
-
-  if (failed) {
-    return (
-      <h1 className="blend-invert font-display w-full text-center text-[22vw] font-black uppercase leading-[0.85] text-cream sm:text-[16vw]">
-        Levity
-      </h1>
-    );
-  }
-
-  return (
-    <img
-      src="/images/levity-wordmark.png"
-      alt="Levity"
-      onError={() => setFailed(true)}
-      className="blend-invert w-full"
-    />
-  );
-}
-
-function IntroSequence({
-  onReveal,
-  onDone,
+function TypewriterText({
+  text,
+  className,
 }: {
-  onReveal: () => void;
-  onDone: () => void;
+  text: string;
+  className?: string;
 }) {
-  const wallProgress = useMotionValue(0); // 0 -> 100, drives wall height AND the text color-flip line together
-  const containerOpacity = useMotionValue(1);
+  const [count, setCount] = useState(0);
+  const [cursorVisible, setCursorVisible] = useState(true);
 
-  const wallHeight = useTransform(wallProgress, (p) => `${p}%`);
-  // The white (flipped) text copy is only visible below the current wall
-  // line — same percentage, same viewport-relative coordinate space as
-  // the wall itself, so the flip always lines up exactly with the wall's
-  // edge, never drifts out of sync.
-  const whiteClip = useTransform(wallProgress, (p) => `inset(${100 - p}% 0 0 0)`);
-
+  // Types out the text, one character at a time
   useEffect(() => {
-    let cancelled = false;
+    setCount(0);
+    let i = 0;
+    const typing = setInterval(() => {
+      i++;
+      setCount(i);
+      if (i >= text.length) clearInterval(typing);
+    }, 34);
+    return () => clearInterval(typing);
+  }, [text]);
 
-    async function run() {
-      // Phase 1: text slides up into place (handled by its own
-      // initial/animate below) — just wait for it to settle.
-      await new Promise((r) => setTimeout(r, 550));
-      if (cancelled) return;
-
-      // Phase 2: black wall rises from the bottom, text flips to white
-      // exactly where the wall's edge currently is.
-      await animate(wallProgress, 100, {
-        duration: 0.7,
-        ease: [0.16, 1, 0.3, 1],
-      });
-      if (cancelled) return;
-
-      // Phase 3: trigger the rest of the page's content to snap in
-      // (About Me / Contact / bottom links), then fade the black away
-      // to reveal the real video background underneath.
-      onReveal();
-      await animate(containerOpacity, 0, {
-        duration: 0.5,
-        ease: "easeInOut",
-      });
-      if (cancelled) return;
-
-      onDone();
-    }
-
-    run();
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // Separate, permanent blink loop — runs forever, independent of typing,
+  // so the cursor keeps blinking after the text is fully written out.
+  useEffect(() => {
+    const blink = setInterval(() => {
+      setCursorVisible((v) => !v);
+    }, 500);
+    return () => clearInterval(blink);
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[95] overflow-hidden">
-      {/* Red background + rising black wall — this group is the ONLY
-          thing that fades at the end. */}
-      <motion.div
-        style={{ opacity: containerOpacity }}
-        className="absolute inset-0 bg-red"
+    <p className={className}>
+      {text.slice(0, count)}
+      <span
+        style={{
+          display: "inline-block",
+          marginLeft: "1px",
+          opacity: cursorVisible ? 1 : 0,
+        }}
       >
-        <motion.div
-          style={{ height: wallHeight }}
-          className="absolute inset-x-0 bottom-0 bg-black"
-        />
-      </motion.div>
-
-      {/* Wordmark — positioned to match its exact final resting spot
-          (4/5 up the screen), so there's zero jump when this hands off
-          to the real page's wordmark underneath. Slides up once on
-          entry, then stays completely static — never tied to the
-          background fade above. */}
-      <div className="absolute left-1/2 top-[20%] w-[85vw] max-w-2xl -translate-x-1/2 -translate-y-1/2">
-        {/* Black copy — visible above the wall line, against red */}
-        <motion.img
-          src="/images/levity-wordmark.png"
-          alt=""
-          aria-hidden="true"
-          initial={{ y: "140%" }}
-          animate={{ y: 0 }}
-          transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
-          className="w-full"
-          style={{ filter: "brightness(0)" }}
-        />
-        {/* White copy — only revealed below the wall line, matching the
-            wall's current height exactly */}
-        <motion.img
-          src="/images/levity-wordmark.png"
-          alt=""
-          aria-hidden="true"
-          initial={{ y: "140%" }}
-          animate={{ y: 0 }}
-          transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
-          className="absolute inset-0 w-full"
-          style={{ clipPath: whiteClip }}
-        />
-      </div>
-    </div>
+        |
+      </span>
+    </p>
   );
 }
 
-function LinkWord({
-  label,
-  onClick,
-  accent = false,
-}: {
-  label: string;
-  onClick: () => void;
-  accent?: boolean;
-}) {
+function PolaroidPhoto({ onClick }: { onClick: () => void }) {
+  const ref = useRef<HTMLButtonElement>(null);
+  const [centered, setCentered] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    // Fires true when the element is within the middle band of the
+    // viewport (roughly centered on screen) — this is what drives the
+    // b&w-to-color swap on phones, where hover doesn't exist.
+    const observer = new IntersectionObserver(
+      ([entry]) => setCentered(entry.isIntersecting),
+      { rootMargin: "-40% 0px -40% 0px", threshold: 0 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <button
+      ref={ref}
       onClick={onClick}
-      className={`font-display ease-premium text-4xl font-bold uppercase leading-[1.05] tracking-tight transition-colors sm:text-5xl ${
-        accent ? "text-red" : "text-cream active:text-red"
-      }`}
+      className="group relative block aspect-square w-full overflow-hidden rounded-[14px] bg-surface-2 text-left"
     >
-      {label}
+      <ImageSlot
+        src="/images/portrait.jpg"
+        alt="Levity Pavic portrait"
+        label="portrait photo"
+        className={`transition-[filter] duration-700 ease-out group-hover:grayscale-0 group-hover:saturate-125 ${
+          centered ? "grayscale-0 saturate-125" : "grayscale"
+        }`}
+      />
+      <div className="grain pointer-events-none absolute inset-0" />
     </button>
   );
 }
 
-function AboutPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
+function LinkRow({
+  label,
+  sub,
+  onClick,
+  delay,
+  image,
+}: {
+  label: string;
+  sub: string;
+  onClick: () => void;
+  delay: number;
+  image: string;
+}) {
   return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          initial={{ x: "100%" }}
-          animate={{ x: 0 }}
-          exit={{ x: "100%" }}
-          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="fixed inset-y-0 right-0 z-[60] w-[92%] max-w-lg overflow-y-auto bg-red px-6 pb-10 pt-6"
-        >
-          <button
-            onClick={onClose}
-            className="font-display text-sm text-black active:opacity-60"
-          >
-            [ &times; ]
-          </button>
-
-          <h2 className="font-display mt-6 text-5xl font-black uppercase leading-[0.95] text-black">
-            Levity
-            <br />
-            Pavic
-          </h2>
-
-          <div className="mt-8 aspect-[3/4] w-full overflow-hidden bg-black/20">
-            <ImageSlot
-              src="/images/about-portrait.jpg"
-              alt="Levity Pavic"
-              label="portrait photo"
-            />
+    <Reveal delay={delay}>
+      <button
+        onClick={onClick}
+        className="group flex w-full items-center gap-4 overflow-hidden rounded-[20px] border border-pink/25 bg-surface text-left transition-colors active:bg-surface-2"
+      >
+        <div className="h-[92px] w-[92px] flex-shrink-0 bg-surface-2">
+          <ImageSlot src={image} alt={`${label} thumbnail`} label="photo" />
+        </div>
+        <div className="flex flex-1 items-center justify-between py-3 pr-4">
+          <div>
+            <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-pink">
+              link:
+            </p>
+            <p className="font-condensed text-lg uppercase tracking-tight text-cream">
+              {label}
+            </p>
+            <p className="mt-0.5 text-xs text-muted">{sub}</p>
           </div>
-
-          <p className="font-display mt-8 text-base leading-relaxed text-black">
-            Born and raised in Brooklyn and now living in SoHo, I am a
-            21-year-old former professional K1 kickboxer who translates the
-            rigorous discipline of elite athletics into everything I do.
-            Having competed and won at both the amateur and professional
-            levels of my sport, I maintain a deep connection to athletic
-            analysis and high-level conditioning, structuring my daily life
-            around intensive training.
-          </p>
-          <p className="font-display mt-4 text-base leading-relaxed text-black">
-            Beyond the gym, I bring a sharp, analytical focus to my personal
-            pursuits. I am a dedicated motorcyclist with a strong command of
-            mechanical engineering, an avid follower of modern tattoo
-            artistry and technique, and a connoisseur of underground
-            electronic music and cinema. Driven by direct communication and
-            a focus on precision, I am currently leveraging my competitive
-            background to build new professional avenues in New York City.
-          </p>
-        </motion.div>
-      )}
-    </AnimatePresence>
+          <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full transition-transform group-active:scale-90"
+            style={{ background: "var(--pink)" }}
+          >
+            <ArrowIcon />
+          </span>
+        </div>
+      </button>
+    </Reveal>
   );
 }
 
-function ContactPopup({
-  open,
-  onClose,
-}: {
-  open: boolean;
-  onClose: () => void;
-}) {
+function ArrowIcon({ color = "var(--bg)" }: { color?: string }) {
   return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 px-4"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={onClose}
-        >
-          <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.95, opacity: 0 }}
-            transition={{ duration: 0.25 }}
-            className="w-full max-w-xs border border-white/15 bg-black p-6 text-center"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <p className="font-display text-lg font-bold uppercase text-cream">
-              Get in touch
-            </p>
-            <p className="font-mono mt-2 text-xs leading-relaxed text-muted">
-              the fastest way to reach me is a DM on Instagram.
-            </p>
-            <button
-              onClick={() => {
-                track("instagram");
-                openExternal(LINKS.instagram);
-              }}
-              className="font-mono mt-5 w-full bg-red py-3.5 text-xs font-bold uppercase tracking-widest text-cream"
-            >
-              Message on Instagram
-            </button>
-            <button
-              onClick={onClose}
-              className="font-mono mt-2 w-full py-3 text-xs uppercase tracking-widest text-muted"
-            >
-              close
-            </button>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 6l6 6-6 6" />
+    </svg>
+  );
+}
+
+function LockIcon({ size = 12 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="4" y="11" width="16" height="9" rx="2" />
+      <path d="M8 11V7a4 4 0 1 1 8 0v4" />
+    </svg>
+  );
+}
+
+function InstagramIcon({ color = "#fff", size = 20 }: { color?: string; size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7">
+      <rect x="3" y="3" width="18" height="18" rx="5" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="17.2" cy="6.8" r="1" fill={color} stroke="none" />
+    </svg>
+  );
+}
+
+function TikTokIcon({ color = "#fff" }: { color?: string }) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7">
+      <path d="M14 4v9.5a3.5 3.5 0 1 1-3.5-3.5" />
+      <path d="M14 4c.5 2.3 2 3.7 4.2 4" />
+    </svg>
+  );
+}
+
+function SnapchatIcon({ color = "#fff" }: { color?: string }) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.6">
+      <path d="M12 4c3 0 4.5 2.2 4.5 5.3 0 .8-.05 1.5-.15 2.1.6.3 1.15.9 1.15 1.4 0 .7-1 1.4-1.9 1.7-.2.9-.5 1.3-.9 1.6.1.5.5 1 1.4 1.4.4.2.4.7 0 1-.6.5-1.6.7-2.4.7-.3.5-1 1.3-1.7 1.3s-1.4-.8-1.7-1.3c-.8 0-1.8-.2-2.4-.7-.4-.3-.4-.8 0-1 .9-.4 1.3-.9 1.4-1.4-.4-.3-.7-.7-.9-1.6-.9-.3-1.9-1-1.9-1.7 0-.5.55-1.1 1.15-1.4-.1-.6-.15-1.3-.15-2.1C7.5 6.2 9 4 12 4Z" />
+    </svg>
   );
 }
