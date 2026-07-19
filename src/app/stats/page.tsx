@@ -14,6 +14,7 @@ export default function StatsPage() {
   const [loading, setLoading] = useState(false);
 
   async function load() {
+    if (!key) return;
     setLoading(true);
     setError("");
     try {
@@ -30,27 +31,34 @@ export default function StatsPage() {
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-6 bg-bg px-6 py-16 text-cream">
-      <h1 className="font-display text-2xl italic">Link clicks</h1>
+      <h1 className="text-2xl font-semibold italic">Link clicks</h1>
 
-      <div className="flex gap-2">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          load();
+        }}
+        className="flex gap-2"
+      >
         <input
           type="password"
           value={key}
           onChange={(e) => setKey(e.target.value)}
           placeholder="stats password"
+          autoFocus
           className="flex-1 rounded-lg border border-white/10 bg-surface px-3 py-2 text-sm outline-none"
         />
         <button
-          onClick={load}
+          type="submit"
           disabled={loading || !key}
           className="rounded-lg px-4 py-2 text-sm font-medium text-bg disabled:opacity-50"
-          style={{ background: "linear-gradient(135deg, var(--rose), var(--gold))" }}
+          style={{ background: "var(--pink)" }}
         >
           {loading ? "Loading…" : "View"}
         </button>
-      </div>
+      </form>
 
-      {error && <p className="text-sm text-rose">{error}</p>}
+      {error && <p className="text-sm text-pink">{error}</p>}
 
       {data && (
         <div className="flex flex-col gap-6">
