@@ -10,10 +10,10 @@ import { openExternal } from "@/lib/browser";
 type Platform = "fanvue" | "instagram" | "tiktok" | "snapchat";
 
 const LINKS: Record<Platform, string> = {
-  fanvue: "https://www.fanvue.com/levitypavic",
-  instagram: "https://www.instagram.com/levitypavic",
-  tiktok: "https://www.tiktok.com/@levitypavic",
-  snapchat: "https://www.snapchat.com/add/levitypavic",
+  fanvue: "https://www.fanvue.com/sparedbytheking",
+  instagram: "https://www.instagram.com/SPAREDBYTHEKING/",
+  tiktok: "https://www.tiktok.com/@sparedbytheking",
+  snapchat: "https://snapchat.com/t/5B0NyjEL",
 };
 
 function track(platform: Platform) {
