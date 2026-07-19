@@ -280,26 +280,25 @@ function HookTag() {
       animate={controls}
       style={{ transformOrigin: "88% 8%" }}
       className="pointer-events-none absolute -right-3 -top-4 z-20 w-[104px] sm:w-[120px]"
-    >
-      <svg viewBox="0 0 140 100" className="w-full drop-shadow-[0_6px_14px_rgba(0,0,0,0.5)]">
+    <svg viewBox="0 0 140 100" className="w-full drop-shadow-[0_6px_14px_rgba(0,0,0,0.5)]">
         {/* hook loop */}
         <circle
           cx="108"
           cy="14"
           r="13"
           fill="none"
-          stroke="#0b0b0d"
+          stroke="#ff4d79"
           strokeWidth="7"
         />
         {/* tag body */}
         <path
           d="M12,52 L52,12 Q56,8 62,8 L118,8 Q128,8 128,18 L128,80 Q128,90 118,90 L34,90 Q28,90 24,86 L12,64 Q8,58 12,52 Z"
-          fill="#0b0b0d"
-          stroke="#ff4d79"
+          fill="#ff4d79"
+          stroke="#0b0b0d"
           strokeWidth="2"
         />
         {/* punch hole */}
-        <circle cx="108" cy="22" r="6" fill="#0b0b0d" stroke="#ff4d79" strokeWidth="2" />
+        <circle cx="108" cy="22" r="6" fill="#ff4d79" stroke="#0b0b0d" strokeWidth="2" />
         <text
           x="72"
           y="55"
@@ -307,7 +306,7 @@ function HookTag() {
           fontStyle="italic"
           fontWeight="700"
           fontSize="26"
-          fill="#ff4d79"
+          fill="#0b0b0d"
           style={{ fontFamily: "var(--font-display), Georgia, serif" }}
         >
           65%
