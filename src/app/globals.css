@@ -54,9 +54,9 @@ body {
   position: absolute;
   inset: -50%;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
-  opacity: 0.22;
+  opacity: 0.35;
   mix-blend-mode: overlay;
-  animation: grain-shift 1s steps(6) infinite;
+  animation: grain-shift 0.8s steps(6) infinite;
   pointer-events: none;
 }
 
