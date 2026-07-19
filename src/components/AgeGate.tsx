@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { isInAppBrowser } from "@/lib/browser";
 
 export default function AgeGate({
   open,
@@ -11,6 +13,12 @@ export default function AgeGate({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const [inApp, setInApp] = useState(false);
+
+  useEffect(() => {
+    setInApp(isInAppBrowser());
+  }, []);
+
   return (
     <AnimatePresence>
       {open && (
@@ -41,47 +49,57 @@ export default function AgeGate({
             >
               adults-only content ahead
             </h2>
-            <p className="mt-2 text-sm leading-relaxed text-muted">
-              you&apos;re about to leave this page for content intended for
-              viewers 18 and older. confirm your age to continue.
-            </p>
 
-            <button
-              onClick={onConfirm}
-              className="mt-5 w-full rounded-full py-3.5 text-sm font-semibold text-bg"
-              style={{ background: "var(--pink)" }}
-            >
-              I&apos;m 18 or older — continue
-            </button>
-            <button
-              onClick={onCancel}
-              className="mt-2 w-full rounded-full py-3 text-sm text-muted"
-            >
-              go back
-            </button>
+            {inApp ? (
+              // Inside Instagram's in-app browser: skip the confirm/cancel
+              // step entirely and go straight to the only real path out —
+              // manually opening in the external browser.
+              <div className="mt-4 rounded-2xl border border-white/10 bg-bg/60 p-4 text-left">
+                <p className="text-center text-xs font-semibold uppercase tracking-wide text-pink">
+                  to visit this link
+                </p>
+                <div className="mt-3 flex items-center gap-3">
+                  <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white/10">
+                    <DotsIcon />
+                  </span>
+                  <p className="text-xs text-cream/90">
+                    Tap the <strong>&quot;•••&quot;</strong> icon in the top
+                    right
+                  </p>
+                </div>
+                <div className="mt-2.5 flex items-center gap-3">
+                  <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white/10">
+                    <BrowserIcon />
+                  </span>
+                  <p className="text-xs text-cream/90">
+                    Select{" "}
+                    <strong>&quot;Open in External Browser&quot;</strong>
+                  </p>
+                </div>
+              </div>
+            ) : (
+              // Already in a real browser — the standard age confirmation.
+              <>
+                <p className="mt-2 text-sm leading-relaxed text-muted">
+                  you&apos;re about to leave this page for content intended
+                  for viewers 18 and older. confirm your age to continue.
+                </p>
 
-            <div className="mt-5 rounded-2xl border border-white/10 bg-bg/60 p-4 text-left">
-              <p className="text-center text-xs font-semibold uppercase tracking-wide text-pink">
-                to visit this link
-              </p>
-              <div className="mt-3 flex items-center gap-3">
-                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white/10">
-                  <DotsIcon />
-                </span>
-                <p className="text-xs text-cream/90">
-                  Tap the <strong>&quot;•••&quot;</strong> icon in the top
-                  right
-                </p>
-              </div>
-              <div className="mt-2.5 flex items-center gap-3">
-                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white/10">
-                  <BrowserIcon />
-                </span>
-                <p className="text-xs text-cream/90">
-                  Select <strong>&quot;Open in External Browser&quot;</strong>
-                </p>
-              </div>
-            </div>
+                <button
+                  onClick={onConfirm}
+                  className="mt-5 w-full rounded-full py-3.5 text-sm font-semibold text-bg"
+                  style={{ background: "var(--pink)" }}
+                >
+                  I&apos;m 18 or older — continue
+                </button>
+                <button
+                  onClick={onCancel}
+                  className="mt-2 w-full rounded-full py-3 text-sm text-muted"
+                >
+                  go back
+                </button>
+              </>
+            )}
           </motion.div>
         </motion.div>
       )}
