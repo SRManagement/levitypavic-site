@@ -1,111 +1,51 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #0b0b0d;
-  --surface: #17161a;
-  --surface-2: #1f1e22;
-  --pink: #ff4d79;
-  --pink-soft: #e8a8c8;
-  --cream: #f5f3f1;
-  --muted: #8a8790;
+  --bg: #000000;
+  --red: #ff0800;
+  --cream: #ffffff;
+  --muted: #8a8a8a;
 }
 
 @theme inline {
   --color-bg: var(--bg);
-  --color-surface: var(--surface);
-  --color-surface-2: var(--surface-2);
-  --color-pink: var(--pink);
-  --color-pink-soft: var(--pink-soft);
+  --color-red: var(--red);
   --color-cream: var(--cream);
   --color-muted: var(--muted);
-  --font-mono: "SF Mono", "Menlo", "Consolas", monospace;
-  --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
 body {
   background: var(--bg);
   color: var(--cream);
-  font-family: var(--font-body), sans-serif;
+  font-family: var(--font-mono);
 }
 
-/* Ornate display font, injected as --font-display on <html> by next/font */
-.font-ornate {
-  font-family: var(--font-display), Georgia, "Times New Roman", serif;
+.touch-manipulation {
+  touch-action: manipulation;
 }
 
-/* Chunky condensed display font for the polaroid name label */
-.font-condensed {
-  font-family: var(--font-condensed), Impact, "Arial Narrow", sans-serif;
-  letter-spacing: 0.02em;
+/* Neue Haas Grotesk is a paid, licensed font we don't have files for —
+   Helvetica Neue is the closest legitimate stand-in (same lineage: Neue
+   Haas Grotesk is literally the 1957 original Helvetica was derived
+   from), and it's the reference site's own documented fallback. */
+.font-display {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
-/* Subtle graph-paper grid on the white polaroid matting */
-.polaroid-grid {
-  background-color: #ffffff;
-  background-image:
-    linear-gradient(rgba(0, 0, 0, 0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 0, 0, 0.045) 1px, transparent 1px);
-  background-size: 9px 9px;
+/* SF Mono referenced as a system font (not embedded) — standard, no
+   licensing concern, matches the reference site's own approach. */
+.font-mono {
+  font-family: "SF Mono", SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
 }
 
-/* Animated film-grain texture, layered over the portrait photo */
-.grain::before {
-  content: "";
-  position: absolute;
-  inset: -50%;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
-  opacity: 0.35;
-  mix-blend-mode: overlay;
-  animation: grain-shift 0.8s steps(6) infinite;
-  pointer-events: none;
+/* Difference-blend text reveal: wherever this text overlaps the video/
+   image behind it, the browser inverts the color at that pixel. Warm
+   skin tones invert toward blue/cyan automatically — no color forcing
+   needed, it's just how color inversion math works. */
+.blend-invert {
+  mix-blend-mode: difference;
 }
 
-@keyframes grain-shift {
-  0%, 100% { transform: translate(0, 0); }
-  10% { transform: translate(-4%, -8%); }
-  20% { transform: translate(-12%, 4%); }
-  30% { transform: translate(6%, -20%); }
-  40% { transform: translate(-4%, 20%); }
-  50% { transform: translate(-12%, 8%); }
-  60% { transform: translate(12%, 0%); }
-  70% { transform: translate(0%, 12%); }
-  80% { transform: translate(3%, 28%); }
-  90% { transform: translate(-8%, 8%); }
-}
-
-/* Slow pink-to-white glow pulse, used on the "Private Access" heading */
-@keyframes glow-pulse {
-  0%, 100% {
-    text-shadow:
-      0 0 8px rgba(255, 77, 121, 0.9),
-      0 0 18px rgba(255, 77, 121, 0.5),
-      0 0 32px rgba(255, 77, 121, 0.25);
-    color: var(--pink);
-  }
-  50% {
-    text-shadow:
-      0 0 10px rgba(255, 255, 255, 0.95),
-      0 0 22px rgba(255, 210, 225, 0.6),
-      0 0 38px rgba(255, 77, 121, 0.35);
-    color: #fff;
-  }
-}
-
-.glow-text {
-  animation: glow-pulse 3.2s ease-in-out infinite;
-}
-
-/* Glassmorphic pill button */
-.glass-button {
-  background: rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  box-shadow:
-    0 4px 24px rgba(255, 77, 121, 0.25),
-    inset 0 1px 0 rgba(255, 255, 255, 0.15);
-}
-
-.glass-button:active {
-  background: rgba(255, 255, 255, 0.18);
+.ease-premium {
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
 }
