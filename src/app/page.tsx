@@ -58,7 +58,8 @@ export default function Home() {
         onCancel={() => setGateOpen(false)}
       />
 
-      <div className="w-full max-w-sm text-center">
+      {/* intro */}
+      <div className="w-full max-w-sm text-left">
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -66,15 +67,16 @@ export default function Home() {
           className="font-mono text-[13px] leading-relaxed text-pink"
         >
           explore Levity&apos;s world — exclusive content, lifestyle
-          updates, favorite links and more
+          updates, favorite links and more 💋
         </motion.p>
       </div>
 
-      <div className="mt-8 flex w-full max-w-sm flex-col items-center gap-6 sm:max-w-2xl sm:flex-row sm:items-start sm:justify-center">
+      {/* unlock card + polaroid, stacked */}
+      <div className="mt-8 flex w-full max-w-sm flex-col gap-8">
         <Reveal delay={0.05}>
           <button
             onClick={requestFanvue}
-            className="group relative block h-[300px] w-[280px] overflow-hidden rounded-[26px] border border-white/10 text-left"
+            className="group relative block aspect-[8/5] w-full overflow-hidden rounded-[24px] border border-white/10 text-left"
           >
             <div className="absolute inset-0 bg-surface">
               <ImageSlot
@@ -84,14 +86,14 @@ export default function Home() {
               />
             </div>
             <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
-            <div className="absolute inset-x-0 bottom-0 p-5">
+            <div className="absolute inset-0 flex flex-col justify-end p-5">
               <p className="glow-text font-ornate flex items-center gap-2 text-2xl font-bold italic tracking-tight">
                 <LockIcon size={18} /> Private Access
               </p>
               <p className="mt-2 text-sm text-cream/90">
                 exclusive content, BTS and more
               </p>
-              <span className="glass-button mt-4 inline-flex items-center gap-2 rounded-full p-1.5 transition-transform group-active:scale-95">
+              <span className="glass-button mt-4 inline-flex w-fit items-center gap-2 rounded-full p-1.5 transition-transform group-active:scale-95">
                 <span
                   className="rounded-full px-5 py-2 text-sm font-bold uppercase tracking-wide text-white"
                   style={{
@@ -111,8 +113,8 @@ export default function Home() {
         </Reveal>
 
         <Reveal delay={0.15}>
-          <div className="polaroid-grid w-[240px] rounded-[20px] p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.45)]">
-            <PolaroidPhoto />
+          <div className="polaroid-grid mx-auto w-[240px] rounded-[20px] p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.45)]">
+            <PolaroidPhoto onClick={requestFanvue} />
             <div className="px-1.5 pb-1 pt-3">
               <p className="font-condensed text-xl text-pink">
                 LEVITY PAVIC
@@ -139,6 +141,7 @@ export default function Home() {
         </Reveal>
       </div>
 
+      {/* link list */}
       <div className="mt-14 flex w-full max-w-sm flex-col gap-4">
         <LinkRow
           delay={0}
@@ -163,6 +166,7 @@ export default function Home() {
         />
       </div>
 
+      {/* feed strip */}
       <Reveal delay={0.1}>
         <div className="mt-16 w-full max-w-sm">
           <button
@@ -201,8 +205,8 @@ export default function Home() {
   );
 }
 
-function PolaroidPhoto() {
-  const ref = useRef<HTMLDivElement>(null);
+function PolaroidPhoto({ onClick }: { onClick: () => void }) {
+  const ref = useRef<HTMLButtonElement>(null);
   const [centered, setCentered] = useState(false);
 
   useEffect(() => {
@@ -217,9 +221,10 @@ function PolaroidPhoto() {
   }, []);
 
   return (
-    <div
+    <button
       ref={ref}
-      className="group relative aspect-square w-full overflow-hidden rounded-[14px] bg-surface-2"
+      onClick={onClick}
+      className="group relative block aspect-square w-full overflow-hidden rounded-[14px] bg-surface-2 text-left"
     >
       <ImageSlot
         src="/images/portrait.jpg"
@@ -230,7 +235,7 @@ function PolaroidPhoto() {
         }`}
       />
       <div className="grain pointer-events-none absolute inset-0" />
-    </div>
+    </button>
   );
 }
 
