@@ -296,7 +296,7 @@ function LinkRow({
             <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-pink">
               link:
             </p>
-            <p className="font-ornate text-lg font-bold uppercase tracking-tight text-cream">
+            <p className="font-condensed text-lg uppercase tracking-tight text-cream">
               {label}
             </p>
             <p className="mt-0.5 text-xs text-muted">{sub}</p>
