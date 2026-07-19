@@ -47,7 +47,11 @@ export default function Home() {
   function confirmFanvue() {
     track("fanvue");
     setGateOpen(false);
-    setTimeout(() => openExternal(LINKS.fanvue), 120);
+    // Must fire synchronously within the click, not delayed — iOS only
+    // hands off to Safari when the new-tab request is a direct, immediate
+    // result of the user's tap. Any setTimeout/async delay here silently
+    // breaks the breakout and it stays trapped in Instagram's browser.
+    openExternal(LINKS.fanvue);
   }
 
   return (
