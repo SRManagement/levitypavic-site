@@ -113,8 +113,10 @@ export default function Home() {
           </motion.button>
         </div>
 
-        <div className="flex flex-1 items-center justify-center">
-          <Wordmark />
+        <div className="relative flex-1">
+          <div className="absolute left-1/2 top-[20%] w-full -translate-x-1/2 -translate-y-1/2">
+            <Wordmark />
+          </div>
         </div>
 
         <motion.div
@@ -154,7 +156,7 @@ function Wordmark() {
       src="/images/levity-wordmark.png"
       alt="Levity"
       onError={() => setFailed(true)}
-      className="blend-invert w-[85vw] max-w-2xl"
+      className="blend-invert mx-auto w-[85vw] max-w-2xl"
     />
   );
 }
@@ -214,41 +216,50 @@ function IntroSequence({
   }, []);
 
   return (
-    <motion.div
-      style={{ opacity: containerOpacity }}
-      className="fixed inset-0 z-[95] overflow-hidden bg-red"
-    >
-      {/* Rising black wall, anchored to the bottom */}
+    <div className="fixed inset-0 z-[95] overflow-hidden">
+      {/* Red background + rising black wall — this group is the ONLY
+          thing that fades at the end. */}
       <motion.div
-        style={{ height: wallHeight }}
-        className="absolute inset-x-0 bottom-0 bg-black"
-      />
+        style={{ opacity: containerOpacity }}
+        className="absolute inset-0 bg-red"
+      >
+        <motion.div
+          style={{ height: wallHeight }}
+          className="absolute inset-x-0 bottom-0 bg-black"
+        />
+      </motion.div>
 
-      {/* Black wordmark — visible above the wall line, against red */}
-      <motion.img
-        src="/images/levity-wordmark.png"
-        alt=""
-        aria-hidden="true"
-        initial={{ y: "140%" }}
-        animate={{ y: 0 }}
-        transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
-        className="absolute inset-0 m-auto h-fit w-[85vw] max-w-2xl"
-        style={{ filter: "brightness(0)" }}
-      />
-
-      {/* White wordmark — only revealed below the wall line, matching
-          the wall's current height exactly */}
-      <motion.img
-        src="/images/levity-wordmark.png"
-        alt=""
-        aria-hidden="true"
-        initial={{ y: "140%" }}
-        animate={{ y: 0 }}
-        transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
-        className="absolute inset-0 m-auto h-fit w-[85vw] max-w-2xl"
-        style={{ clipPath: whiteClip }}
-      />
-    </motion.div>
+      {/* Wordmark — positioned to match its exact final resting spot
+          (4/5 up the screen), so there's zero jump when this hands off
+          to the real page's wordmark underneath. Slides up once on
+          entry, then stays completely static — never tied to the
+          background fade above. */}
+      <div className="absolute left-1/2 top-[20%] w-[85vw] max-w-2xl -translate-x-1/2 -translate-y-1/2">
+        {/* Black copy — visible above the wall line, against red */}
+        <motion.img
+          src="/images/levity-wordmark.png"
+          alt=""
+          aria-hidden="true"
+          initial={{ y: "140%" }}
+          animate={{ y: 0 }}
+          transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+          className="w-full"
+          style={{ filter: "brightness(0)" }}
+        />
+        {/* White copy — only revealed below the wall line, matching the
+            wall's current height exactly */}
+        <motion.img
+          src="/images/levity-wordmark.png"
+          alt=""
+          aria-hidden="true"
+          initial={{ y: "140%" }}
+          animate={{ y: 0 }}
+          transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+          className="absolute inset-0 w-full"
+          style={{ clipPath: whiteClip }}
+        />
+      </div>
+    </div>
   );
 }
 
