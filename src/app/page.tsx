@@ -71,9 +71,37 @@ export default function Home() {
         </motion.p>
       </div>
 
-      {/* unlock card + polaroid, stacked */}
+      {/* polaroid + unlock card, stacked */}
       <div className="mt-8 flex w-full max-w-sm flex-col gap-8">
         <Reveal delay={0.05}>
+          <div className="polaroid-grid mx-auto w-[240px] rounded-[20px] p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.45)]">
+            <PolaroidPhoto onClick={requestFanvue} />
+            <div className="px-1.5 pb-1 pt-3">
+              <p className="font-condensed text-xl text-pink">
+                LEVITY PAVIC
+              </p>
+              <div className="mt-1 flex items-center justify-between">
+                <p className="text-[11px] text-neutral-500">
+                  model · creator · muse
+                </p>
+                <p className="font-mono text-[11px] text-neutral-400">2026</p>
+              </div>
+              <div className="mt-3 flex items-center gap-4 border-t border-neutral-200 pt-3">
+                <button onClick={() => goSocial("instagram")} aria-label="instagram">
+                  <InstagramIcon color="#ff4d79" />
+                </button>
+                <button onClick={() => goSocial("tiktok")} aria-label="tiktok">
+                  <TikTokIcon color="#ff4d79" />
+                </button>
+                <button onClick={() => goSocial("snapchat")} aria-label="snapchat">
+                  <SnapchatIcon color="#ff4d79" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </Reveal>
+
+        <Reveal delay={0.15}>
           <button
             onClick={requestFanvue}
             className="group relative block aspect-[8/5] w-full overflow-hidden rounded-[24px] border border-white/10 text-left"
@@ -110,34 +138,6 @@ export default function Home() {
               </span>
             </div>
           </button>
-        </Reveal>
-
-        <Reveal delay={0.15}>
-          <div className="polaroid-grid mx-auto w-[240px] rounded-[20px] p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.45)]">
-            <PolaroidPhoto onClick={requestFanvue} />
-            <div className="px-1.5 pb-1 pt-3">
-              <p className="font-condensed text-xl text-pink">
-                LEVITY PAVIC
-              </p>
-              <div className="mt-1 flex items-center justify-between">
-                <p className="text-[11px] text-neutral-500">
-                  model · creator · muse
-                </p>
-                <p className="font-mono text-[11px] text-neutral-400">2026</p>
-              </div>
-              <div className="mt-3 flex items-center gap-4 border-t border-neutral-200 pt-3">
-                <button onClick={() => goSocial("instagram")} aria-label="instagram">
-                  <InstagramIcon color="#ff4d79" />
-                </button>
-                <button onClick={() => goSocial("tiktok")} aria-label="tiktok">
-                  <TikTokIcon color="#ff4d79" />
-                </button>
-                <button onClick={() => goSocial("snapchat")} aria-label="snapchat">
-                  <SnapchatIcon color="#ff4d79" />
-                </button>
-              </div>
-            </div>
-          </div>
         </Reveal>
       </div>
 
