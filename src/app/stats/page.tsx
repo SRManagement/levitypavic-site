@@ -30,15 +30,15 @@ export default function StatsPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-6 bg-bg px-6 py-16 text-cream">
-      <h1 className="text-2xl font-semibold italic">Link clicks</h1>
+    <main style={{ minHeight: "100vh", width: "100%", background: "#0b0b0d", color: "#f5f3f1", padding: "64px 24px", maxWidth: "480px", margin: "0 auto" }}>
+      <h1 style={{ fontSize: "24px", fontWeight: 600, fontStyle: "italic", marginBottom: "24px" }}>Link clicks</h1>
 
       <form
         onSubmit={(e) => {
           e.preventDefault();
           load();
         }}
-        className="flex gap-2"
+        style={{ display: "flex", flexDirection: "column", gap: "12px" }}
       >
         <input
           type="password"
@@ -46,48 +46,62 @@ export default function StatsPage() {
           onChange={(e) => setKey(e.target.value)}
           placeholder="stats password"
           autoFocus
-          className="flex-1 rounded-lg border border-white/10 bg-surface px-3 py-2 text-sm outline-none"
+          style={{
+            width: "100%",
+            boxSizing: "border-box",
+            borderRadius: "8px",
+            border: "1px solid rgba(255,255,255,0.2)",
+            background: "#17161a",
+            color: "#f5f3f1",
+            padding: "12px",
+            fontSize: "16px",
+            outline: "none",
+          }}
         />
         <button
           type="submit"
           disabled={loading || !key}
-          className="rounded-lg px-4 py-2 text-sm font-medium text-bg disabled:opacity-50"
-          style={{ background: "var(--pink)" }}
+          style={{
+            width: "100%",
+            borderRadius: "8px",
+            padding: "14px",
+            fontSize: "16px",
+            fontWeight: 600,
+            background: loading || !key ? "#7a3a4a" : "#ff4d79",
+            color: "#0b0b0d",
+            border: "none",
+            cursor: loading || !key ? "not-allowed" : "pointer",
+          }}
         >
-          {loading ? "Loading…" : "View"}
+          {loading ? "Loading..." : "View stats"}
         </button>
       </form>
 
-      {error && <p className="text-sm text-pink">{error}</p>}
+      {error && <p style={{ color: "#ff4d79", fontSize: "14px", marginTop: "12px" }}>{error}</p>}
 
       {data && (
-        <div className="flex flex-col gap-6">
-          <div className="grid grid-cols-2 gap-3">
+        <div style={{ display: "flex", flexDirection: "column", gap: "24px", marginTop: "24px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
             {Object.entries(data.totals).map(([platform, count]) => (
-              <div key={platform} className="rounded-xl bg-surface p-4">
-                <p className="text-xs capitalize text-muted">{platform}</p>
-                <p className="mt-1 text-2xl">{count}</p>
+              <div key={platform} style={{ borderRadius: "12px", background: "#17161a", padding: "16px" }}>
+                <p style={{ fontSize: "12px", color: "#8a8790", textTransform: "capitalize" }}>{platform}</p>
+                <p style={{ fontSize: "24px", marginTop: "4px" }}>{count}</p>
               </div>
             ))}
           </div>
 
           <div>
-            <p className="mb-2 text-xs uppercase tracking-wide text-muted">
+            <p style={{ fontSize: "12px", color: "#8a8790", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "8px" }}>
               Last 14 days
             </p>
-            <div className="flex flex-col gap-1 text-sm">
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px", fontSize: "14px" }}>
               {Object.entries(data.daily)
                 .sort((a, b) => (a[0] < b[0] ? 1 : -1))
                 .map(([day, counts]) => (
-                  <div
-                    key={day}
-                    className="flex items-center justify-between border-b border-white/5 py-1.5"
-                  >
-                    <span className="text-muted">{day}</span>
+                  <div key={day} style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid rgba(255,255,255,0.05)", padding: "6px 0" }}>
+                    <span style={{ color: "#8a8790" }}>{day}</span>
                     <span>
-                      {Object.entries(counts)
-                        .map(([p, c]) => `${p}: ${c}`)
-                        .join("  ·  ")}
+                      {Object.entries(counts).map(([p, c]) => `${p}: ${c}`).join("  ·  ")}
                     </span>
                   </div>
                 ))}
