@@ -90,6 +90,17 @@ export default function Home() {
         <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/20 to-black/80" />
       </div>
 
+      {/* Wordmark — positioned against the full screen (matching <main>,
+          which is h-[100dvh]) so its coordinate system is identical to
+          the intro overlay's (also full-screen via fixed inset-0). If
+          this were nested inside the flex layout below instead, "20%
+          from the top" would mean two different actual pixel positions
+          in each case — which is exactly what caused the jump/relocate
+          bug. Kept as a sibling, not a child, of the flex content. */}
+      <div className="absolute left-1/2 top-[20%] z-10 w-[85vw] max-w-2xl -translate-x-1/2 -translate-y-1/2">
+        <Wordmark />
+      </div>
+
       {/* Foreground layout */}
       <div className="relative z-10 flex h-full w-full flex-col justify-between px-5 py-6">
         <div className="flex w-full items-center justify-between">
@@ -113,11 +124,7 @@ export default function Home() {
           </motion.button>
         </div>
 
-        <div className="relative flex-1">
-          <div className="absolute left-1/2 top-[20%] w-full -translate-x-1/2 -translate-y-1/2">
-            <Wordmark />
-          </div>
-        </div>
+        <div className="flex-1" />
 
         <motion.div
           initial={{ y: "140%", opacity: 0 }}
@@ -129,10 +136,10 @@ export default function Home() {
             All My Links
           </p>
           <div className="flex flex-col items-center">
+            <LinkWord label="Exclusive Content" onClick={requestFanvue} accent />
             <LinkWord label="Instagram" onClick={() => goSocial("instagram")} />
-            <LinkWord label="TikTok" onClick={() => goSocial("tiktok")} />
             <LinkWord label="Snapchat" onClick={() => goSocial("snapchat")} />
-            <LinkWord label="Unlock" onClick={requestFanvue} accent />
+            <LinkWord label="TikTok" onClick={() => goSocial("tiktok")} />
           </div>
         </motion.div>
       </div>
@@ -156,7 +163,7 @@ function Wordmark() {
       src="/images/levity-wordmark.png"
       alt="Levity"
       onError={() => setFailed(true)}
-      className="blend-invert mx-auto w-[85vw] max-w-2xl"
+      className="blend-invert w-full"
     />
   );
 }
