@@ -91,8 +91,20 @@ export default function Home() {
               <p className="mt-2 text-sm text-cream/90">
                 exclusive content, BTS and more
               </p>
-              <span className="glass-button mt-4 inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold uppercase tracking-wide text-white transition-transform group-active:scale-95">
-                unlock 💖 <ArrowIcon color="#fff" />
+              <span className="glass-button mt-4 inline-flex items-center gap-2 rounded-full p-1.5 transition-transform group-active:scale-95">
+                <span
+                  className="rounded-full px-5 py-2 text-sm font-bold uppercase tracking-wide text-white"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, rgba(255,255,255,0.4), rgba(255,140,185,0.65))",
+                  }}
+                >
+                  Unlock
+                </span>
+                <span className="text-base">💖</span>
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
+                  <ArrowIcon color="#fff" />
+                </span>
               </span>
             </div>
           </button>
