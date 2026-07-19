@@ -13,7 +13,7 @@ const LINKS: Record<Platform, string> = {
   fanvue: "https://www.fanvue.com/sparedbytheking",
   instagram: "https://www.instagram.com/SPAREDBYTHEKING/",
   tiktok: "https://www.tiktok.com/@sparedbytheking",
-  snapchat: "https://snapchat.com/t/5B0NyjEL",
+  snapchat: "https://www.snapchat.com/add/levitypavic",
 };
 
 function track(platform: Platform) {
