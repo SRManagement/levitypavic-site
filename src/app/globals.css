@@ -18,7 +18,6 @@
   --color-pink-soft: var(--pink-soft);
   --color-cream: var(--cream);
   --color-muted: var(--muted);
-  --font-display: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-mono: "SF Mono", "Menlo", "Consolas", monospace;
   --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
@@ -27,4 +26,46 @@ body {
   background: var(--bg);
   color: var(--cream);
   font-family: var(--font-body), sans-serif;
+}
+
+/* Ornate display font, injected as --font-display on <html> by next/font */
+.font-ornate {
+  font-family: var(--font-display), Georgia, "Times New Roman", serif;
+}
+
+/* Slow pink-to-white glow pulse, used on the "Private Access" heading */
+@keyframes glow-pulse {
+  0%, 100% {
+    text-shadow:
+      0 0 8px rgba(255, 77, 121, 0.9),
+      0 0 18px rgba(255, 77, 121, 0.5),
+      0 0 32px rgba(255, 77, 121, 0.25);
+    color: var(--pink);
+  }
+  50% {
+    text-shadow:
+      0 0 10px rgba(255, 255, 255, 0.95),
+      0 0 22px rgba(255, 210, 225, 0.6),
+      0 0 38px rgba(255, 77, 121, 0.35);
+    color: #fff;
+  }
+}
+
+.glow-text {
+  animation: glow-pulse 3.2s ease-in-out infinite;
+}
+
+/* Glassmorphic pill button */
+.glass-button {
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow:
+    0 4px 24px rgba(255, 77, 121, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.glass-button:active {
+  background: rgba(255, 255, 255, 0.18);
 }
