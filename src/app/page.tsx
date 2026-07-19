@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { motion, useAnimationControls } from "framer-motion";
+import { motion } from "framer-motion";
 import Reveal from "@/components/Reveal";
 import AgeGate from "@/components/AgeGate";
 import ImageSlot from "@/components/ImageSlot";
@@ -100,7 +100,6 @@ export default function Home() {
         </motion.div>
 
         <div className="relative">
-          <HookTag />
           <motion.button
             onClick={requestFanvue}
             initial={{ scaleX: 0.25, opacity: 0 }}
@@ -224,7 +223,7 @@ function TypewriterText({
       i++;
       setCount(i);
       if (i >= text.length) clearInterval(interval);
-    }, 22);
+    }, 34);
     return () => clearInterval(interval);
   }, [text]);
 
@@ -233,98 +232,6 @@ function TypewriterText({
       {text.slice(0, count)}
       <span className="typewriter-cursor">|</span>
     </p>
-  );
-}
-
-function HookTag() {
-  const ref = useRef<HTMLDivElement>(null);
-  const controls = useAnimationControls();
-  const hasPlayed = useRef(false);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && !hasPlayed.current) {
-          hasPlayed.current = true;
-          controls
-            .start({
-              rotate: 0,
-              y: 0,
-              opacity: 1,
-              transition: { type: "spring", stiffness: 260, damping: 9, delay: 0.2 },
-            })
-            .then(() => {
-              controls.start({
-                rotate: [0, 5, -4, 3, -2, 0],
-                transition: {
-                  duration: 4.5,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                },
-              });
-            });
-        }
-      },
-      { threshold: 0.4 }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [controls]);
-
-  return (
-    <motion.div
-      ref={ref}
-      initial={{ rotate: -35, y: -55, opacity: 0 }}
-      animate={controls}
-      style={{ transformOrigin: "88% 8%" }}
-      className="pointer-events-none absolute -right-3 -top-4 z-20 w-[104px] sm:w-[120px]"
-    <svg viewBox="0 0 140 100" className="w-full drop-shadow-[0_6px_14px_rgba(0,0,0,0.5)]">
-        {/* hook loop */}
-        <circle
-          cx="108"
-          cy="14"
-          r="13"
-          fill="none"
-          stroke="#ff4d79"
-          strokeWidth="7"
-        />
-        {/* tag body */}
-        <path
-          d="M12,52 L52,12 Q56,8 62,8 L118,8 Q128,8 128,18 L128,80 Q128,90 118,90 L34,90 Q28,90 24,86 L12,64 Q8,58 12,52 Z"
-          fill="#ff4d79"
-          stroke="#0b0b0d"
-          strokeWidth="2"
-        />
-        {/* punch hole */}
-        <circle cx="108" cy="22" r="6" fill="#ff4d79" stroke="#0b0b0d" strokeWidth="2" />
-        <text
-          x="72"
-          y="55"
-          textAnchor="middle"
-          fontStyle="italic"
-          fontWeight="700"
-          fontSize="26"
-          fill="#0b0b0d"
-          style={{ fontFamily: "var(--font-display), Georgia, serif" }}
-        >
-          65%
-        </text>
-        <text
-          x="72"
-          y="76"
-          textAnchor="middle"
-          fontStyle="italic"
-          fontWeight="700"
-          fontSize="18"
-          fill="#f5f3f1"
-          style={{ fontFamily: "var(--font-display), Georgia, serif" }}
-        >
-          off
-        </text>
-      </svg>
-    </motion.div>
   );
 }
 
