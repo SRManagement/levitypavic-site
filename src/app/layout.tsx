@@ -1,18 +1,12 @@
 import type { Metadata } from "next";
-import { Playfair_Display, Anton } from "next/font/google";
+import { Hanken_Grotesk } from "next/font/google";
 import "./globals.css";
+import InAppBrowserBanner from "@/components/InAppBrowserBanner";
 
-const playfair = Playfair_Display({
-  variable: "--font-display",
+const hankenGrotesk = Hanken_Grotesk({
+  variable: "--font-hanken",
   subsets: ["latin"],
-  style: ["italic", "normal"],
-  weight: ["600", "700", "800", "900"],
-});
-
-const anton = Anton({
-  variable: "--font-condensed",
-  subsets: ["latin"],
-  weight: ["400"],
+  weight: ["400", "500"],
 });
 
 export const metadata: Metadata = {
@@ -26,11 +20,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${playfair.variable} ${anton.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="en" className={`${hankenGrotesk.variable} h-full antialiased`}>
+      <body className="min-h-full flex flex-col">
+        <InAppBrowserBanner />
+        {children}
+      </body>
     </html>
   );
 }
