@@ -59,9 +59,53 @@ export default function AgeGate({
             >
               go back
             </button>
+
+            <div className="mt-5 rounded-2xl border border-white/10 bg-bg/60 p-4 text-left">
+              <p className="text-center text-xs font-semibold uppercase tracking-wide text-pink">
+                to visit this link
+              </p>
+              <div className="mt-3 flex items-center gap-3">
+                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white/10">
+                  <DotsIcon />
+                </span>
+                <p className="text-xs text-cream/90">
+                  Tap the <strong>&quot;•••&quot;</strong> icon in the top
+                  right
+                </p>
+              </div>
+              <div className="mt-2.5 flex items-center gap-3">
+                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white/10">
+                  <BrowserIcon />
+                </span>
+                <p className="text-xs text-cream/90">
+                  Select <strong>&quot;Open in External Browser&quot;</strong>
+                </p>
+              </div>
+            </div>
           </motion.div>
         </motion.div>
       )}
     </AnimatePresence>
+  );
+}
+
+function DotsIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--pink)" strokeWidth="2.4" strokeLinecap="round">
+      <circle cx="5" cy="12" r="1.4" fill="var(--pink)" stroke="none" />
+      <circle cx="12" cy="12" r="1.4" fill="var(--pink)" stroke="none" />
+      <circle cx="19" cy="12" r="1.4" fill="var(--pink)" stroke="none" />
+    </svg>
+  );
+}
+
+function BrowserIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--pink)" strokeWidth="1.8">
+      <rect x="3" y="4" width="18" height="16" rx="2.5" />
+      <path d="M3 8.5h18" strokeLinecap="round" />
+      <path d="M13.5 12.5h4.5v4.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M18 12.5l-5.5 5.5" strokeLinecap="round" />
+    </svg>
   );
 }
