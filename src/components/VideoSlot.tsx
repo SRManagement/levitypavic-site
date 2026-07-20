@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export default function VideoSlot({
   videoSrc,
@@ -13,10 +13,28 @@ export default function VideoSlot({
 }) {
   const [videoFailed, setVideoFailed] = useState(false);
   const [posterFailed, setPosterFailed] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    // iOS Safari requires the video to be genuinely muted at the moment
+    // autoplay is attempted, or it blocks autoplay and shows a manual
+    // play prompt instead. React's JSX `muted` attribute doesn't always
+    // reliably reach the real DOM property in time — setting it directly
+    // here, then explicitly calling play(), is the reliable fix.
+    el.muted = true;
+    el.play().catch(() => {
+      // Autoplay was blocked for some other reason (rare, but possible
+      // depending on browser/data-saver settings) — the poster image
+      // stays visible in that case, which is a reasonable fallback.
+    });
+  }, [videoSrc]);
 
   if (!videoFailed) {
     return (
       <video
+        ref={videoRef}
         autoPlay
         muted
         loop
