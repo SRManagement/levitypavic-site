@@ -409,9 +409,9 @@ function ContactPopup({
             <p className="font-mono mt-3 text-xs leading-relaxed text-muted">
               Business inquiries are handled exclusively through Instagram
               DM. Want to get to know me on a more personal level?
-              That&apos;s exactly what the{" "}
+              That&apos;s what the{" "}
               <span className="text-red">Exclusive Content</span> page is
-              for, see you there!
+              for. See you there!
             </p>
           </motion.div>
         </motion.div>
