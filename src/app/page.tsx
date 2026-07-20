@@ -97,7 +97,7 @@ export default function Home() {
       {/* Background media */}
       <div className="absolute inset-0">
         <VideoSlot videoSrc="/videos/hero-bg.mp4" posterSrc="/images/hero-bg.jpg" />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/20 to-black/80" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/70 via-black/20 to-black/80" />
       </div>
 
       {/* Wordmark — positioned against the full screen (matching <main>,
