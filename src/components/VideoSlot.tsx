@@ -13,34 +13,34 @@ export default function VideoSlot({
 }) {
   const [videoFailed, setVideoFailed] = useState(false);
   const [posterFailed, setPosterFailed] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     const el = videoRef.current;
     if (!el) return;
-    // iOS Safari requires the video to be genuinely muted at the moment
-    // autoplay is attempted, or it blocks autoplay and shows a manual
-    // play prompt instead. React's JSX `muted` attribute doesn't always
-    // reliably reach the real DOM property in time — setting it directly
-    // here, then explicitly calling play(), is the reliable fix.
     el.muted = true;
 
     function tryPlay() {
       el?.play().catch(() => {});
     }
 
-    tryPlay();
+    // Only once this actually fires do we reveal the video — this is
+    // the real guarantee against any native "paused"/"tap to play" UI
+    // ever being visible (e.g. iOS Low Power Mode): the video element
+    // stays invisible, poster image shown in its place, until genuine
+    // playback is confirmed. Nothing to see means nothing to hide.
+    function handlePlaying() {
+      setIsPlaying(true);
+    }
 
-    // Retry once the browser confirms enough data has buffered to play
-    // smoothly — covers the case where the very first attempt above ran
-    // before any data had loaded yet.
+    el.addEventListener("playing", handlePlaying);
+    tryPlay();
     el.addEventListener("loadeddata", tryPlay);
     el.addEventListener("canplay", tryPlay);
 
-    // Safety net: iOS always allows video playback to start on the very
-    // first user interaction, even if every silent attempt above was
-    // blocked. Retrying here — invisibly, before any play button could
-    // ever render — guarantees it never becomes visible to the person.
+    // Safety net: the very first real interaction anywhere on the page
+    // always unlocks playback, even under Low Power Mode.
     function retryOnFirstTouch() {
       tryPlay();
       document.removeEventListener("touchstart", retryOnFirstTouch);
@@ -50,6 +50,7 @@ export default function VideoSlot({
     document.addEventListener("click", retryOnFirstTouch, { once: true });
 
     return () => {
+      el.removeEventListener("playing", handlePlaying);
       el.removeEventListener("loadeddata", tryPlay);
       el.removeEventListener("canplay", tryPlay);
       document.removeEventListener("touchstart", retryOnFirstTouch);
@@ -57,8 +58,43 @@ export default function VideoSlot({
     };
   }, [videoSrc]);
 
-  if (!videoFailed) {
+  if (videoFailed) {
+    if (!posterFailed) {
+      // eslint-disable-next-line @next/next/no-img-element
+      return (
+        <img
+          src={posterSrc}
+          alt="Levity Pavic"
+          onError={() => setPosterFailed(true)}
+          className={`h-full w-full object-cover ${className}`}
+        />
+      );
+    }
     return (
+      <div className={`flex items-center justify-center bg-black ${className}`}>
+        <span className="px-4 text-center text-[10px] leading-relaxed text-muted">
+          add background video to /public/videos
+          <br />
+          or photo to /public/images
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`relative h-full w-full ${className}`}>
+      {/* Poster image — fully visible until playback is confirmed,
+          fades out once the real video takes over. */}
+      {!posterFailed && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={posterSrc}
+          alt="Levity Pavic"
+          onError={() => setPosterFailed(true)}
+          className="absolute inset-0 h-full w-full object-cover transition-opacity duration-500"
+          style={{ opacity: isPlaying ? 0 : 1 }}
+        />
+      )}
       <video
         ref={videoRef}
         autoPlay
@@ -66,34 +102,12 @@ export default function VideoSlot({
         loop
         playsInline
         preload="auto"
-        poster={posterSrc}
         onError={() => setVideoFailed(true)}
-        className={`h-full w-full object-cover ${className}`}
+        className="absolute inset-0 h-full w-full object-cover transition-opacity duration-500"
+        style={{ opacity: isPlaying ? 1 : 0 }}
       >
         <source src={videoSrc} type="video/mp4" />
       </video>
-    );
-  }
-
-  if (!posterFailed) {
-    // eslint-disable-next-line @next/next/no-img-element
-    return (
-      <img
-        src={posterSrc}
-        alt="Levity Pavic"
-        onError={() => setPosterFailed(true)}
-        className={`h-full w-full object-cover ${className}`}
-      />
-    );
-  }
-
-  return (
-    <div className={`flex items-center justify-center bg-black ${className}`}>
-      <span className="px-4 text-center text-[10px] leading-relaxed text-muted">
-        add background video to /public/videos
-        <br />
-        or photo to /public/images
-      </span>
     </div>
   );
 }
