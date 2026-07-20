@@ -392,30 +392,27 @@ function ContactPopup({
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
             transition={{ duration: 0.25 }}
-            className="w-full max-w-xs border border-white/15 bg-black p-6 text-center"
-            onClick={(e) => e.stopPropagation()}
+            onClick={onClose}
+            className="relative w-full max-w-xs border border-white/15 bg-black p-6 pt-10 text-center"
           >
+            <button
+              onClick={onClose}
+              aria-label="close"
+              className="absolute left-1/2 top-3 flex h-7 w-7 -translate-x-1/2 items-center justify-center rounded-full border border-white/25 text-cream"
+            >
+              <span className="text-xs leading-none">&times;</span>
+            </button>
+
             <p className="font-display text-lg font-bold uppercase text-cream">
               Get in touch
             </p>
-            <p className="font-mono mt-2 text-xs leading-relaxed text-muted">
-              the fastest way to reach me is a DM on Instagram.
+            <p className="font-mono mt-3 text-xs leading-relaxed text-muted">
+              Business inquiries are handled exclusively through Instagram
+              DM. Want to get to know me on a more personal level?
+              That&apos;s exactly what the{" "}
+              <span className="text-red">Exclusive Content</span> page is
+              for, see you there!
             </p>
-            <button
-              onClick={() => {
-                track("instagram");
-                openExternal(LINKS.instagram);
-              }}
-              className="font-mono mt-5 w-full bg-red py-3.5 text-xs font-bold uppercase tracking-widest text-cream"
-            >
-              Message on Instagram
-            </button>
-            <button
-              onClick={onClose}
-              className="font-mono mt-2 w-full py-3 text-xs uppercase tracking-widest text-muted"
-            >
-              close
-            </button>
           </motion.div>
         </motion.div>
       )}
