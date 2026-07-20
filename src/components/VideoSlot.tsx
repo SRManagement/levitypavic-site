@@ -24,11 +24,37 @@ export default function VideoSlot({
     // reliably reach the real DOM property in time — setting it directly
     // here, then explicitly calling play(), is the reliable fix.
     el.muted = true;
-    el.play().catch(() => {
-      // Autoplay was blocked for some other reason (rare, but possible
-      // depending on browser/data-saver settings) — the poster image
-      // stays visible in that case, which is a reasonable fallback.
-    });
+
+    function tryPlay() {
+      el?.play().catch(() => {});
+    }
+
+    tryPlay();
+
+    // Retry once the browser confirms enough data has buffered to play
+    // smoothly — covers the case where the very first attempt above ran
+    // before any data had loaded yet.
+    el.addEventListener("loadeddata", tryPlay);
+    el.addEventListener("canplay", tryPlay);
+
+    // Safety net: iOS always allows video playback to start on the very
+    // first user interaction, even if every silent attempt above was
+    // blocked. Retrying here — invisibly, before any play button could
+    // ever render — guarantees it never becomes visible to the person.
+    function retryOnFirstTouch() {
+      tryPlay();
+      document.removeEventListener("touchstart", retryOnFirstTouch);
+      document.removeEventListener("click", retryOnFirstTouch);
+    }
+    document.addEventListener("touchstart", retryOnFirstTouch, { once: true });
+    document.addEventListener("click", retryOnFirstTouch, { once: true });
+
+    return () => {
+      el.removeEventListener("loadeddata", tryPlay);
+      el.removeEventListener("canplay", tryPlay);
+      document.removeEventListener("touchstart", retryOnFirstTouch);
+      document.removeEventListener("click", retryOnFirstTouch);
+    };
   }, [videoSrc]);
 
   if (!videoFailed) {
@@ -39,6 +65,7 @@ export default function VideoSlot({
         muted
         loop
         playsInline
+        preload="auto"
         poster={posterSrc}
         onError={() => setVideoFailed(true)}
         className={`h-full w-full object-cover ${className}`}
