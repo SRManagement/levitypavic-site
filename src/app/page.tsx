@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
 import AgeGate from "@/components/AgeGate";
 import VideoSlot from "@/components/VideoSlot";
@@ -39,8 +39,6 @@ export default function Home() {
   const [showIntro, setShowIntro] = useState(true);
   const [revealed, setRevealed] = useState(false);
   const [almostThere, setAlmostThere] = useState(false);
-  const [audioMuted, setAudioMuted] = useState(true);
-  const audioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -50,39 +48,6 @@ export default function Home() {
       setGateOpen(true);
     }
   }, []);
-
-  useEffect(() => {
-    const el = audioRef.current;
-    if (!el) return;
-    // No browser allows genuinely audible autoplay — this isn't a
-    // device setting like video's Low Power Mode, it's a universal
-    // policy. Starting muted is the only way autoplay is permitted at
-    // all; unmuting on the very first tap anywhere gives the practical
-    // effect of "autoplay," since people almost always interact with
-    // the page within a second or two of landing.
-    el.muted = true;
-    el.play().catch(() => {});
-
-    function unmuteOnFirstTouch() {
-      setAudioMuted(false);
-      document.removeEventListener("touchstart", unmuteOnFirstTouch);
-      document.removeEventListener("click", unmuteOnFirstTouch);
-    }
-    document.addEventListener("touchstart", unmuteOnFirstTouch, { once: true });
-    document.addEventListener("click", unmuteOnFirstTouch, { once: true });
-
-    return () => {
-      document.removeEventListener("touchstart", unmuteOnFirstTouch);
-      document.removeEventListener("click", unmuteOnFirstTouch);
-    };
-  }, []);
-
-  useEffect(() => {
-    const el = audioRef.current;
-    if (!el) return;
-    el.muted = audioMuted;
-    if (!audioMuted) el.play().catch(() => {});
-  }, [audioMuted]);
 
   function goSocial(platform: Exclude<Platform, "fanvue">) {
     track(platform);
@@ -112,11 +77,6 @@ export default function Home() {
           — otherwise the browser only starts fetching it at that moment,
           which is what caused the slow first-open on a cold cache. */}
       <link rel="preload" as="image" href="/images/about-portrait.jpg" />
-
-      {/* Ambient background audio — starts muted (the only way any
-          browser allows autoplay to begin at all), unmutes on the first
-          tap anywhere via the effect above. No visual footprint. */}
-      <audio ref={audioRef} src="/audio/ambient.mp3" loop autoPlay muted />
 
       {showIntro && (
         <IntroSequence
@@ -153,7 +113,7 @@ export default function Home() {
 
       {/* Foreground layout */}
       <div className="relative z-10 flex h-full w-full flex-col justify-between px-5 py-6">
-        <div className="relative flex w-full items-center justify-between">
+        <div className="flex w-full items-center justify-between">
           <motion.button
             onClick={() => setAboutOpen(true)}
             initial={{ x: "-120%", opacity: 0 }}
@@ -163,15 +123,6 @@ export default function Home() {
           >
             About Me
           </motion.button>
-
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={revealed ? { opacity: 1, scale: 1 } : {}}
-            transition={{ type: "spring", stiffness: 480, damping: 26, delay: 0.1 }}
-            className="absolute left-1/2 -translate-x-1/2"
-          >
-            <MuteButton muted={audioMuted} onToggle={() => setAudioMuted((m) => !m)} />
-          </motion.div>
 
           <motion.button
             onClick={() => setContactOpen(true)}
@@ -225,44 +176,6 @@ function Wordmark() {
       onError={() => setFailed(true)}
       className="blend-invert w-full"
     />
-  );
-}
-
-function MuteButton({
-  muted,
-  onToggle,
-}: {
-  muted: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <button
-      onClick={onToggle}
-      aria-label={muted ? "unmute" : "mute"}
-      className="flex h-5 w-5 items-center justify-center text-cream active:opacity-60"
-    >
-      {muted ? <SpeakerMutedIcon /> : <SpeakerIcon />}
-    </button>
-  );
-}
-
-function SpeakerIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 9v6h4l5 4V5L8 9H4Z" />
-      <path d="M16.5 8.5a5 5 0 0 1 0 7" />
-      <path d="M19 6a8.5 8.5 0 0 1 0 12" />
-    </svg>
-  );
-}
-
-function SpeakerMutedIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 9v6h4l5 4V5L8 9H4Z" />
-      <path d="M16 9l5 6" />
-      <path d="M21 9l-5 6" />
-    </svg>
   );
 }
 
