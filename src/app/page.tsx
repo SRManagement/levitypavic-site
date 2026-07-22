@@ -38,15 +38,12 @@ export default function Home() {
   const [contactOpen, setContactOpen] = useState(false);
   const [showIntro, setShowIntro] = useState(true);
   const [revealed, setRevealed] = useState(false);
-  const [almostThere, setAlmostThere] = useState(false);
+  const [inApp, setInApp] = useState(false);
+  const [checkedInApp, setCheckedInApp] = useState(false);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("go") === "fanvue" && !isInAppBrowser()) {
-      window.history.replaceState(null, "", window.location.pathname);
-      setAlmostThere(true);
-      setGateOpen(true);
-    }
+    setInApp(isInAppBrowser());
+    setCheckedInApp(true);
   }, []);
 
   function goSocial(platform: Exclude<Platform, "fanvue">) {
@@ -55,13 +52,7 @@ export default function Home() {
   }
 
   function requestFanvue() {
-    setAlmostThere(false);
     setGateOpen(true);
-
-    if (isInAppBrowser()) {
-      track("fanvue");
-      window.history.replaceState(null, "", "?go=fanvue");
-    }
   }
 
   function confirmFanvue() {
@@ -70,20 +61,6 @@ export default function Home() {
     openExternal(LINKS.fanvue);
   }
 
-  function inAppAttempt() {
-    track("fanvue");
-    // x-web-search:// (tried previously) confirmed-only searches — it
-    // has no direct-navigation mode, by Apple's design, no exceptions.
-    // x-safari-https:// is a different, undocumented scheme reported
-    // (unofficially, on iOS developer forums) to open the exact URL
-    // directly in Safari rather than searching for it. Built by
-    // swapping the https:// prefix for x-safari-https://. Not
-    // guaranteed — support may vary by iOS version, which is exactly
-    // what we're testing here. The gate stays open either way so the
-    // manual "Open in External Browser" fallback is still available
-    // if this doesn't work either.
-    window.location.href = `x-web-search://?${LINKS.fanvue}`;
-
   return (
     <main className="relative h-[100dvh] w-full overflow-hidden bg-bg">
       {/* Preloads the About Me portrait in the background on first page
@@ -91,6 +68,15 @@ export default function Home() {
           — otherwise the browser only starts fetching it at that moment,
           which is what caused the slow first-open on a cold cache. */}
       <link rel="preload" as="image" href="/images/about-portrait.jpg" />
+
+      {/* Mandatory gate — shown immediately, before anything else, only
+          when inside an in-app browser (Instagram etc). No dismiss
+          option by design: the person either continues out to their
+          real browser or leaves. Everyone who reaches the rest of the
+          site (including the age gate below) is guaranteed to already
+          be in a real browser, which is what lets AgeGate stay simple —
+          no more in-app-specific branching needed there. */}
+      {checkedInApp && inApp && <ExitInstagramGate />}
 
       {showIntro && (
         <IntroSequence
@@ -101,10 +87,7 @@ export default function Home() {
 
       <AgeGate
         open={gateOpen}
-        almostThere={almostThere}
-        fanvueUrl={LINKS.fanvue}
         onConfirm={confirmFanvue}
-        onInAppAttempt={inAppAttempt}
         onCancel={() => setGateOpen(false)}
       />
       <AboutPanel open={aboutOpen} onClose={() => setAboutOpen(false)} />
@@ -171,6 +154,39 @@ export default function Home() {
         </motion.div>
       </div>
     </main>
+  );
+}
+
+function ExitInstagramGate() {
+  function continueToSite() {
+    // x-web-search:// is the only mechanism confirmed (through actual
+    // testing) to escape Instagram's in-app browser at all — it hands
+    // off to Safari, but only as a search, never a direct navigation.
+    // Searching the site's own bare domain (not the Fanvue link) gives
+    // Google an unambiguous top result to land on. No exit/skip option
+    // by design — the person either continues out or leaves.
+    window.location.href = "x-web-search://?levitypavic.com";
+  }
+
+  return (
+    <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black px-6 text-center">
+      <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-red">
+        heads up
+      </p>
+      <h1 className="font-display mt-3 text-xl font-bold uppercase leading-snug text-cream">
+        continue in your browser
+      </h1>
+      <p className="font-mono mt-3 max-w-xs text-xs leading-relaxed text-muted">
+        this page works best outside of Instagram. tap below to continue
+        in your default browser.
+      </p>
+      <button
+        onClick={continueToSite}
+        className="font-mono mt-6 w-full max-w-xs bg-red py-3.5 text-xs font-bold uppercase tracking-widest text-cream"
+      >
+        continue in browser
+      </button>
+    </div>
   );
 }
 
