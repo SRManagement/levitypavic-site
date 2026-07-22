@@ -69,6 +69,21 @@ export default function Home() {
           which is what caused the slow first-open on a cold cache. */}
       <link rel="preload" as="image" href="/images/about-portrait.jpg" />
 
+      {/* Solid black mask, covers everything until we know for certain
+          whether to show the ExitInstagramGate or the intro — prevents
+          the intro's red/black reveal from ever starting prematurely
+          and then being abruptly covered, which is what caused the
+          brief flash before this fix. Fades out cleanly once resolved. */}
+      <AnimatePresence>
+        {!checkedInApp && (
+          <motion.div
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="fixed inset-0 z-[110] bg-black"
+          />
+        )}
+      </AnimatePresence>
+
       {/* Mandatory gate — shown immediately, before anything else, only
           when inside an in-app browser (Instagram etc). No dismiss
           option by design: the person either continues out to their
@@ -78,7 +93,7 @@ export default function Home() {
           no more in-app-specific branching needed there. */}
       {checkedInApp && inApp && <ExitInstagramGate />}
 
-      {showIntro && (
+      {checkedInApp && !inApp && showIntro && (
         <IntroSequence
           onReveal={() => setRevealed(true)}
           onDone={() => setShowIntro(false)}
