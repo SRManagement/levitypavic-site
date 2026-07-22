@@ -62,17 +62,6 @@ export default function AgeGate({
 
             {inApp ? (
               <>
-                {/* A real, already-rendered anchor tag that the person's
-                    actual finger taps — not a script-simulated click on
-                    a dynamically created element (which is what we tried
-                    before and it didn't reliably escape). WebKit's
-                    internal "hand off to Safari" logic may weigh a
-                    genuinely-tapped link differently than a synthetic
-                    one, since browsers generally trust real user
-                    gestures more than script-triggered events. Not
-                    guaranteed — Instagram's own webview may still
-                    intercept it regardless — which is why the manual
-                    fallback below stays visible either way. */}
                 
                   href={fanvueUrl}
                   target="_blank"
