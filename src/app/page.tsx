@@ -171,18 +171,26 @@ function ExitInstagramGate() {
     const el = videoRef.current;
     if (!el) return;
 
-    // Skip the video's own fade-in-from-black on the very first play only
-    // — this listener fires once (loadedmetadata only happens on initial
-    // load, not on loop restarts), so it doesn't interfere with the
-    // native loop attribute, which correctly restarts from 0 every time
-    // after that.
-    function skipIntroOnce() {
+    // The double-flash came from autoPlay starting playback at frame 0
+    // at the same time this code tried to jump it to 2s — two things
+    // racing each other, and the mid-playback seek itself causing a
+    // visible stutter. Fix: no autoPlay at all. Seek first, silently,
+    // while nothing is playing yet — only call play() once the seek is
+    // actually complete (the "seeked" event), so playback only ever
+    // starts from exactly the 2s mark, never from 0, never interrupted.
+    function seekToStart() {
       if (videoRef.current) videoRef.current.currentTime = 2;
     }
 
-    el.addEventListener("loadedmetadata", skipIntroOnce);
+    function playAfterSeek() {
+      videoRef.current?.play().catch(() => {});
+    }
+
+    el.addEventListener("loadedmetadata", seekToStart);
+    el.addEventListener("seeked", playAfterSeek);
     return () => {
-      el.removeEventListener("loadedmetadata", skipIntroOnce);
+      el.removeEventListener("loadedmetadata", seekToStart);
+      el.removeEventListener("seeked", playAfterSeek);
     };
   }, []);
 
@@ -195,7 +203,6 @@ function ExitInstagramGate() {
           clash with this screen's own fade-from-black overlay. */}
       <video
         ref={videoRef}
-        autoPlay
         muted
         loop
         playsInline
