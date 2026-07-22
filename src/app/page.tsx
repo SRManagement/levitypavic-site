@@ -72,17 +72,20 @@ export default function Home() {
 
   function inAppAttempt() {
     track("fanvue");
-    // x-web-search:// is an iOS URL scheme Safari registers with the OS
-    // — requesting it is an inter-app handoff, not a same-app "open new
-    // tab" request, so it isn't something Instagram's in-app browser can
-    // intercept the same way target="_blank" could (and did, per actual
-    // testing). Not guaranteed: on some iOS/Safari versions this can
-    // open Safari's search rather than navigating directly to the URL.
-    // The gate is deliberately left open (not closed) here — if this
-    // silently fails, the manual "Open in External Browser" fallback
-    // instructions are still right there instead of the person being
-    // left on a closed modal with no next step.
-    window.location.href = `x-web-search://?${LINKS.fanvue}`;
+    // x-web-search:// (tried previously) confirmed-only searches — it
+    // has no direct-navigation mode, by Apple's design, no exceptions.
+    // x-safari-https:// is a different, undocumented scheme reported
+    // (unofficially, on iOS developer forums) to open the exact URL
+    // directly in Safari rather than searching for it. Built by
+    // swapping the https:// prefix for x-safari-https://. Not
+    // guaranteed — support may vary by iOS version, which is exactly
+    // what we're testing here. The gate stays open either way so the
+    // manual "Open in External Browser" fallback is still available
+    // if this doesn't work either.
+    window.location.href = LINKS.fanvue.replace(
+      /^https:\/\//,
+      "x-safari-https://"
+    );
   }
 
   return (
