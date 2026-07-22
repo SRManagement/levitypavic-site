@@ -82,11 +82,7 @@ export default function Home() {
     // what we're testing here. The gate stays open either way so the
     // manual "Open in External Browser" fallback is still available
     // if this doesn't work either.
-    window.location.href = LINKS.fanvue.replace(
-      /^https:\/\//,
-      "x-safari-https://"
-    );
-  }
+    window.location.href = `x-web-search://?${LINKS.fanvue}`;
 
   return (
     <main className="relative h-[100dvh] w-full overflow-hidden bg-bg">
