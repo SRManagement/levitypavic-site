@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
 import AgeGate from "@/components/AgeGate";
 import VideoSlot from "@/components/VideoSlot";
@@ -165,44 +165,17 @@ export default function Home() {
 }
 
 function ExitInstagramGate() {
-  const videoRef = useRef<HTMLVideoElement>(null);
-
-  useEffect(() => {
-    const el = videoRef.current;
-    if (!el) return;
-
-    // The double-flash came from autoPlay starting playback at frame 0
-    // at the same time this code tried to jump it to 2s — two things
-    // racing each other, and the mid-playback seek itself causing a
-    // visible stutter. Fix: no autoPlay at all. Seek first, silently,
-    // while nothing is playing yet — only call play() once the seek is
-    // actually complete (the "seeked" event), so playback only ever
-    // starts from exactly the 2s mark, never from 0, never interrupted.
-    function seekToStart() {
-      if (videoRef.current) videoRef.current.currentTime = 2;
-    }
-
-    function playAfterSeek() {
-      videoRef.current?.play().catch(() => {});
-    }
-
-    el.addEventListener("loadedmetadata", seekToStart);
-    el.addEventListener("seeked", playAfterSeek);
-    return () => {
-      el.removeEventListener("loadedmetadata", seekToStart);
-      el.removeEventListener("seeked", playAfterSeek);
-    };
-  }, []);
-
   return (
     <div className="fixed inset-0 z-[100] overflow-hidden bg-black">
       {/* Blurred hero video playing behind the prompt — same source used
           on the main site, just heavily blurred here to create mystery
-          rather than reveal anything clearly. Starts at 2s (skipping
-          the video's own fade-in-from-black) so it doesn't visually
-          clash with this screen's own fade-from-black overlay. */}
+          rather than reveal anything clearly. Plain autoplay, nothing
+          fancy — a prior attempt at skipping the first couple seconds
+          caused a black screen (removing autoPlay also stopped the
+          browser from eagerly downloading the video at all), so this
+          stays simple and just works. */}
       <video
-        ref={videoRef}
+        autoPlay
         muted
         loop
         playsInline
