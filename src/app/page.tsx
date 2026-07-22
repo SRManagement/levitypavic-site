@@ -70,6 +70,14 @@ export default function Home() {
     openExternal(LINKS.fanvue);
   }
 
+  function inAppAttempt() {
+    // The real anchor tag's own href/target=_blank handles navigation
+    // natively — calling openExternal() here too would double-fire a
+    // second, conflicting navigation attempt on top of it.
+    track("fanvue");
+    setGateOpen(false);
+  }
+
   return (
     <main className="relative h-[100dvh] w-full overflow-hidden bg-bg">
       {/* Preloads the About Me portrait in the background on first page
@@ -88,7 +96,9 @@ export default function Home() {
       <AgeGate
         open={gateOpen}
         almostThere={almostThere}
+        fanvueUrl={LINKS.fanvue}
         onConfirm={confirmFanvue}
+        onInAppAttempt={inAppAttempt}
         onCancel={() => setGateOpen(false)}
       />
       <AboutPanel open={aboutOpen} onClose={() => setAboutOpen(false)} />
@@ -186,14 +196,10 @@ function IntroSequence({
   onReveal: () => void;
   onDone: () => void;
 }) {
-  const wallProgress = useMotionValue(0); // 0 -> 100, drives wall height AND the text color-flip line together
+  const wallProgress = useMotionValue(0);
   const containerOpacity = useMotionValue(1);
 
   const wallHeight = useTransform(wallProgress, (p) => `${p}%`);
-  // The white (flipped) text copy is only visible below the current wall
-  // line — same percentage, same viewport-relative coordinate space as
-  // the wall itself, so the flip always lines up exactly with the wall's
-  // edge, never drifts out of sync.
   const whiteClip = useTransform(wallProgress, (p) => `inset(${100 - p}% 0 0 0)`);
 
   useEffect(() => {
