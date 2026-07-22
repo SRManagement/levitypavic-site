@@ -55,3 +55,14 @@ body {
 .ease-premium {
   transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
 }
+
+/* Suppresses Safari's native "tap to play" button that can appear on a
+   muted, inline, autoplay video when playback is blocked (e.g. iOS Low
+   Power Mode). There's no way to override the Low Power Mode restriction
+   itself from JS — this is the real, standard fix: the button graphic
+   never renders, and our own first-touch retry (see VideoSlot.tsx)
+   starts playback the instant any real interaction happens instead. */
+video::-webkit-media-controls-start-playback-button {
+  display: none !important;
+  -webkit-appearance: none;
+}
