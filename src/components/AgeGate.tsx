@@ -62,13 +62,7 @@ export default function AgeGate({
 
             {inApp ? (
               <>
-                
-                  href={fanvueUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={onInAppAttempt}
-                  className="font-mono mt-5 block w-full bg-red py-3.5 text-xs font-bold uppercase tracking-widest text-cream"
-                >
+                <a href={fanvueUrl} target="_blank" rel="noopener noreferrer" onClick={onInAppAttempt} className="font-mono mt-5 block w-full bg-red py-3.5 text-xs font-bold uppercase tracking-widest text-cream">
                   I&apos;m 18 or older — continue
                 </a>
 
@@ -81,8 +75,7 @@ export default function AgeGate({
                       <DotsIcon />
                     </span>
                     <p className="font-mono text-xs text-cream/90">
-                      Tap the <strong>&quot;•••&quot;</strong> icon in the
-                      top right
+                      Tap the <strong>&quot;•••&quot;</strong> icon in the top right
                     </p>
                   </div>
                   <div className="mt-2.5 flex items-center gap-3">
@@ -90,31 +83,21 @@ export default function AgeGate({
                       <BrowserIcon />
                     </span>
                     <p className="font-mono text-xs text-cream/90">
-                      Select{" "}
-                      <strong>&quot;Open in External Browser&quot;</strong>
+                      Select <strong>&quot;Open in External Browser&quot;</strong>
                     </p>
                   </div>
                 </div>
 
-                <button
-                  onClick={onCancel}
-                  className="font-mono mt-3 w-full py-3 text-xs uppercase tracking-widest text-muted"
-                >
+                <button onClick={onCancel} className="font-mono mt-3 w-full py-3 text-xs uppercase tracking-widest text-muted">
                   go back
                 </button>
               </>
             ) : (
               <>
-                <button
-                  onClick={onConfirm}
-                  className="font-mono mt-5 w-full bg-red py-3.5 text-xs font-bold uppercase tracking-widest text-cream"
-                >
+                <button onClick={onConfirm} className="font-mono mt-5 w-full bg-red py-3.5 text-xs font-bold uppercase tracking-widest text-cream">
                   I&apos;m 18 or older — continue
                 </button>
-                <button
-                  onClick={onCancel}
-                  className="font-mono mt-2 w-full py-3 text-xs uppercase tracking-widest text-muted"
-                >
+                <button onClick={onCancel} className="font-mono mt-2 w-full py-3 text-xs uppercase tracking-widest text-muted">
                   go back
                 </button>
               </>
