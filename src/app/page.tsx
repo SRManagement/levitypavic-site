@@ -78,7 +78,7 @@ export default function Home() {
         {!checkedInApp && (
           <motion.div
             exit={{ opacity: 0 }}
-            transition={{ duration: 1 }}
+            transition={{ duration: 0.2 }}
             className="fixed inset-0 z-[110] bg-black"
           />
         )}
@@ -195,7 +195,12 @@ function ExitInstagramGate() {
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[100] overflow-hidden bg-black">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 1 }}
+      className="fixed inset-0 z-[100] overflow-hidden bg-black"
+    >
       {/* Blurred hero video playing behind the prompt — same source used
           on the main site, just heavily blurred here to create mystery
           rather than reveal anything clearly. Starts at 2s (skipping
@@ -241,7 +246,7 @@ function ExitInstagramGate() {
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
