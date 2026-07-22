@@ -71,18 +71,10 @@ export default function Home() {
 
       {/* Solid black mask, covers everything until we know for certain
           whether to show the ExitInstagramGate or the intro — prevents
-          the intro's red/black reveal from ever starting prematurely
-          and then being abruptly covered, which is what caused the
-          brief flash before this fix. Fades out cleanly once resolved. */}
-      <AnimatePresence>
-        {!checkedInApp && (
-          <motion.div
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-[110] bg-black"
-          />
-        )}
-      </AnimatePresence>
+          either from starting prematurely. Appears/disappears instantly,
+          no transition, so there's nothing left to overlap or bleed
+          through with anything underneath. */}
+      {!checkedInApp && <div className="fixed inset-0 z-[110] bg-black" />}
 
       {/* Mandatory gate — shown immediately, before anything else, only
           when inside an in-app browser (Instagram etc). No dismiss
@@ -195,12 +187,7 @@ function ExitInstagramGate() {
   }, []);
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 1 }}
-      className="fixed inset-0 z-[100] overflow-hidden bg-black"
-    >
+    <div className="fixed inset-0 z-[100] overflow-hidden bg-black">
       {/* Blurred hero video playing behind the prompt — same source used
           on the main site, just heavily blurred here to create mystery
           rather than reveal anything clearly. Starts at 2s (skipping
@@ -246,7 +233,7 @@ function ExitInstagramGate() {
           </div>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
