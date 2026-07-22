@@ -7,12 +7,16 @@ import { isInAppBrowser } from "@/lib/browser";
 export default function AgeGate({
   open,
   almostThere = false,
+  fanvueUrl,
   onConfirm,
+  onInAppAttempt,
   onCancel,
 }: {
   open: boolean;
   almostThere?: boolean;
+  fanvueUrl: string;
   onConfirm: () => void;
+  onInAppAttempt: () => void;
   onCancel: () => void;
 }) {
   const [inApp, setInApp] = useState(false);
@@ -51,38 +55,56 @@ export default function AgeGate({
             >
               {almostThere ? "almost there" : "adults-only content ahead"}
             </h2>
+            <p className="font-mono mt-2 text-xs leading-relaxed text-muted">
+              you&apos;re about to leave this page for content intended
+              for viewers 18 and older. confirm your age to continue.
+            </p>
 
             {inApp ? (
-              <div className="mt-4 border border-white/15 bg-white/5 p-4 text-left">
-                <p className="font-mono text-center text-xs uppercase tracking-widest text-red">
-                  to visit this link
-                </p>
-                <div className="mt-3 flex items-center gap-3">
-                  <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center border border-white/15">
-                    <DotsIcon />
-                  </span>
-                  <p className="font-mono text-xs text-cream/90">
-                    Tap the <strong>&quot;•••&quot;</strong> icon in the top
-                    right
+              <>
+                
+                  href={fanvueUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={onInAppAttempt}
+                  className="font-mono mt-5 block w-full bg-red py-3.5 text-xs font-bold uppercase tracking-widest text-cream"
+                >
+                  I&apos;m 18 or older — continue
+                </a>
+
+                <div className="mt-4 border border-white/15 bg-white/5 p-4 text-left">
+                  <p className="font-mono text-center text-xs uppercase tracking-widest text-red">
+                    if that opened inside instagram
                   </p>
+                  <div className="mt-3 flex items-center gap-3">
+                    <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center border border-white/15">
+                      <DotsIcon />
+                    </span>
+                    <p className="font-mono text-xs text-cream/90">
+                      Tap the <strong>&quot;•••&quot;</strong> icon in the
+                      top right
+                    </p>
+                  </div>
+                  <div className="mt-2.5 flex items-center gap-3">
+                    <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center border border-white/15">
+                      <BrowserIcon />
+                    </span>
+                    <p className="font-mono text-xs text-cream/90">
+                      Select{" "}
+                      <strong>&quot;Open in External Browser&quot;</strong>
+                    </p>
+                  </div>
                 </div>
-                <div className="mt-2.5 flex items-center gap-3">
-                  <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center border border-white/15">
-                    <BrowserIcon />
-                  </span>
-                  <p className="font-mono text-xs text-cream/90">
-                    Select{" "}
-                    <strong>&quot;Open in External Browser&quot;</strong>
-                  </p>
-                </div>
-              </div>
+
+                <button
+                  onClick={onCancel}
+                  className="font-mono mt-3 w-full py-3 text-xs uppercase tracking-widest text-muted"
+                >
+                  go back
+                </button>
+              </>
             ) : (
               <>
-                <p className="font-mono mt-2 text-xs leading-relaxed text-muted">
-                  you&apos;re about to leave this page for content intended
-                  for viewers 18 and older. confirm your age to continue.
-                </p>
-
                 <button
                   onClick={onConfirm}
                   className="font-mono mt-5 w-full bg-red py-3.5 text-xs font-bold uppercase tracking-widest text-cream"
