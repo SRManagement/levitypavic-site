@@ -7,13 +7,14 @@ import VideoSlot from "@/components/VideoSlot";
 import ImageSlot from "@/components/ImageSlot";
 import { openExternal, isInAppBrowser } from "@/lib/browser";
 
-type Platform = "fanvue" | "instagram" | "tiktok" | "snapchat";
+type Platform = "fanvue" | "instagram" | "tiktok" | "snapchat" | "telegram";
 
 const LINKS: Record<Platform, string> = {
   fanvue: "https://www.fanvue.com/sparedbytheking",
   instagram: "https://www.instagram.com/SPAREDBYTHEKING/",
   tiktok: "https://www.tiktok.com/@sparedbytheking",
   snapchat: "https://www.snapchat.com/add/levitypavic",
+  telegram: "https://t.me/levitypavic", // TODO: swap in the real channel URL
 };
 
 function track(platform: Platform) {
@@ -154,6 +155,7 @@ export default function Home() {
           </p>
           <div className="flex flex-col items-center">
             <LinkWord label="Exclusive Content" onClick={requestFanvue} accent />
+            <LinkWord label="Telegram" onClick={() => goSocial("telegram")} />
             <LinkWord label="Instagram" onClick={() => goSocial("instagram")} />
             <LinkWord label="Snapchat" onClick={() => goSocial("snapchat")} />
             <LinkWord label="TikTok" onClick={() => goSocial("tiktok")} />
