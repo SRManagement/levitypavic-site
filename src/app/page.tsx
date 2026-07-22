@@ -158,35 +158,75 @@ export default function Home() {
 }
 
 function ExitInstagramGate() {
-  function continueToSite() {
-    // x-web-search:// is the only mechanism confirmed (through actual
-    // testing) to escape Instagram's in-app browser at all — it hands
-    // off to Safari, but only as a search, never a direct navigation.
-    // Searching the site's own bare domain (not the Fanvue link) gives
-    // Google an unambiguous top result to land on. No exit/skip option
-    // by design — the person either continues out or leaves.
-    window.location.href = 'x-web-search://?"levitypavic.com"';
-  }
-
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black px-6 text-center">
-      <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-red">
-        heads up
-      </p>
-      <h1 className="font-display mt-3 text-xl font-bold uppercase leading-snug text-cream">
-        continue in your browser
-      </h1>
-      <p className="font-mono mt-3 max-w-xs text-xs leading-relaxed text-muted">
-        this page works best outside of Instagram. tap below to continue
-        in your default browser.
-      </p>
-      <button
-        onClick={continueToSite}
-        className="font-mono mt-6 w-full max-w-xs bg-red py-3.5 text-xs font-bold uppercase tracking-widest text-cream"
+    <div className="fixed inset-0 z-[100] overflow-hidden bg-black">
+      {/* Blurred hero video playing behind the prompt — same source used
+          on the main site, just heavily blurred here to create mystery
+          rather than reveal anything clearly. */}
+      <video
+        autoPlay
+        muted
+        loop
+        playsInline
+        poster="/images/hero-bg.jpg"
+        className="absolute inset-0 h-full w-full scale-110 object-cover blur-2xl"
       >
-        continue in browser
-      </button>
+        <source src="/videos/hero-bg.mp4" type="video/mp4" />
+      </video>
+      <div className="absolute inset-0 bg-black/70" />
+
+      {/* No button, no close, no way to dismiss — the person either
+          follows these steps to escape Instagram's browser, or closes
+          the link entirely. Nothing in between. */}
+      <div className="relative z-10 flex h-full flex-col items-center justify-center px-6 text-center">
+        <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-red">
+          heads up
+        </p>
+        <h1 className="font-display mt-3 text-xl font-bold uppercase leading-snug text-cream">
+          open in external browser
+        </h1>
+
+        <div className="mt-6 w-full max-w-xs border border-white/15 bg-black/60 p-4 text-left backdrop-blur-sm">
+          <div className="flex items-center gap-3">
+            <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center border border-white/15">
+              <DotsIcon />
+            </span>
+            <p className="font-mono text-xs text-cream/90">
+              Tap the <strong>&quot;•••&quot;</strong> icon in the top right
+            </p>
+          </div>
+          <div className="mt-3 flex items-center gap-3">
+            <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center border border-white/15">
+              <BrowserIcon />
+            </span>
+            <p className="font-mono text-xs text-cream/90">
+              Select <strong>&quot;Open in External Browser&quot;</strong>
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
+  );
+}
+
+function DotsIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--red)" strokeWidth="2.4" strokeLinecap="round">
+      <circle cx="5" cy="12" r="1.4" fill="var(--red)" stroke="none" />
+      <circle cx="12" cy="12" r="1.4" fill="var(--red)" stroke="none" />
+      <circle cx="19" cy="12" r="1.4" fill="var(--red)" stroke="none" />
+    </svg>
+  );
+}
+
+function BrowserIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--red)" strokeWidth="1.8">
+      <rect x="3" y="4" width="18" height="16" rx="2.5" />
+      <path d="M3 8.5h18" strokeLinecap="round" />
+      <path d="M13.5 12.5h4.5v4.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M18 12.5l-5.5 5.5" strokeLinecap="round" />
+    </svg>
   );
 }
 
