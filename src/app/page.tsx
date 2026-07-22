@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
 import AgeGate from "@/components/AgeGate";
 import VideoSlot from "@/components/VideoSlot";
@@ -78,7 +78,7 @@ export default function Home() {
         {!checkedInApp && (
           <motion.div
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
+            transition={{ duration: 1 }}
             className="fixed inset-0 z-[110] bg-black"
           />
         )}
@@ -173,18 +173,42 @@ export default function Home() {
 }
 
 function ExitInstagramGate() {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el) return;
+
+    // Skip the video's own fade-in-from-black on the very first play only
+    // — this listener fires once (loadedmetadata only happens on initial
+    // load, not on loop restarts), so it doesn't interfere with the
+    // native loop attribute, which correctly restarts from 0 every time
+    // after that.
+    function skipIntroOnce() {
+      if (videoRef.current) videoRef.current.currentTime = 2;
+    }
+
+    el.addEventListener("loadedmetadata", skipIntroOnce);
+    return () => {
+      el.removeEventListener("loadedmetadata", skipIntroOnce);
+    };
+  }, []);
+
   return (
     <div className="fixed inset-0 z-[100] overflow-hidden bg-black">
       {/* Blurred hero video playing behind the prompt — same source used
           on the main site, just heavily blurred here to create mystery
-          rather than reveal anything clearly. */}
+          rather than reveal anything clearly. Starts at 2s (skipping
+          the video's own fade-in-from-black) so it doesn't visually
+          clash with this screen's own fade-from-black overlay. */}
       <video
+        ref={videoRef}
         autoPlay
         muted
         loop
         playsInline
         poster="/images/hero-bg.jpg"
-        className="absolute inset-0 h-full w-full scale-110 object-cover blur-2xl"
+        className="absolute inset-0 h-full w-full scale-110 object-cover blur-lg"
       >
         <source src="/videos/hero-bg.mp4" type="video/mp4" />
       </video>
@@ -194,11 +218,8 @@ function ExitInstagramGate() {
           follows these steps to escape Instagram's browser, or closes
           the link entirely. Nothing in between. */}
       <div className="relative z-10 flex h-full flex-col items-center justify-center px-6 text-center">
-        <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-red">
-          heads up
-        </p>
-        <h1 className="font-display mt-3 text-xl font-bold uppercase leading-snug text-cream">
-          open in external browser
+        <h1 className="font-display text-xl font-bold uppercase leading-snug text-cream">
+          open in browser
         </h1>
 
         <div className="mt-6 w-full max-w-xs border border-white/15 bg-black/60 p-4 text-left backdrop-blur-sm">
@@ -273,25 +294,36 @@ function IntroSequence({
   onReveal: () => void;
   onDone: () => void;
 }) {
-  const wallProgress = useMotionValue(0);
+  const wallProgress = useMotionValue(0); // 0 -> 100, drives wall height AND the text color-flip line together
   const containerOpacity = useMotionValue(1);
 
   const wallHeight = useTransform(wallProgress, (p) => `${p}%`);
+  // The white (flipped) text copy is only visible below the current wall
+  // line — same percentage, same viewport-relative coordinate space as
+  // the wall itself, so the flip always lines up exactly with the wall's
+  // edge, never drifts out of sync.
   const whiteClip = useTransform(wallProgress, (p) => `inset(${100 - p}% 0 0 0)`);
 
   useEffect(() => {
     let cancelled = false;
 
     async function run() {
+      // Phase 1: text slides up into place (handled by its own
+      // initial/animate below) — just wait for it to settle.
       await new Promise((r) => setTimeout(r, 550));
       if (cancelled) return;
 
+      // Phase 2: black wall rises from the bottom, text flips to white
+      // exactly where the wall's edge currently is.
       await animate(wallProgress, 100, {
         duration: 0.7,
         ease: [0.16, 1, 0.3, 1],
       });
       if (cancelled) return;
 
+      // Phase 3: trigger the rest of the page's content to snap in
+      // (About Me / Contact / bottom links), then fade the black away
+      // to reveal the real video background underneath.
       onReveal();
       await animate(containerOpacity, 0, {
         duration: 0.5,
@@ -311,6 +343,8 @@ function IntroSequence({
 
   return (
     <div className="fixed inset-0 z-[95] overflow-hidden">
+      {/* Red background + rising black wall — this group is the ONLY
+          thing that fades at the end. */}
       <motion.div
         style={{ opacity: containerOpacity }}
         className="absolute inset-0 bg-red"
@@ -321,7 +355,13 @@ function IntroSequence({
         />
       </motion.div>
 
+      {/* Wordmark — positioned to match its exact final resting spot
+          (4/5 up the screen), so there's zero jump when this hands off
+          to the real page's wordmark underneath. Slides up once on
+          entry, then stays completely static — never tied to the
+          background fade above. */}
       <div className="absolute left-1/2 top-[20%] w-[85vw] max-w-2xl -translate-x-1/2 -translate-y-1/2">
+        {/* Black copy — visible above the wall line, against red */}
         <motion.img
           src="/images/levity-wordmark.png"
           alt=""
@@ -332,6 +372,8 @@ function IntroSequence({
           className="w-full"
           style={{ filter: "brightness(0)" }}
         />
+        {/* White copy — only revealed below the wall line, matching the
+            wall's current height exactly */}
         <motion.img
           src="/images/levity-wordmark.png"
           alt=""
@@ -373,6 +415,9 @@ function AboutPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
     <AnimatePresence>
       {open && (
         <>
+          {/* Full-screen tap-catcher, sits behind the panel — covers the
+              sliver of background still visible on the left while the
+              panel is open, so a tap there also closes it. */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
