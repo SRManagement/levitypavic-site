@@ -165,7 +165,7 @@ function ExitInstagramGate() {
     // Searching the site's own bare domain (not the Fanvue link) gives
     // Google an unambiguous top result to land on. No exit/skip option
     // by design — the person either continues out or leaves.
-    window.location.href = "x-web-search://?levitypavic.com";
+    window.location.href = 'x-web-search://?"levitypavic.com"';
   }
 
   return (
