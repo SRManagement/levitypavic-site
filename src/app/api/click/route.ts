@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { kv } from "@vercel/kv";
+import { pstDateKey, pstHourKey } from "@/lib/pst";
 
-const ALLOWED_PLATFORMS = ["fanvue", "instagram", "tiktok", "snapchat"] as const;
+const ALLOWED_PLATFORMS = [
+  "fanvue",
+  "instagram",
+  "tiktok",
+  "snapchat",
+  "telegram",
+] as const;
 type Platform = (typeof ALLOWED_PLATFORMS)[number];
 
 function isPlatform(value: string): value is Platform {
@@ -17,14 +24,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid platform" }, { status: 400 });
     }
 
-    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const now = new Date();
+    const day = pstDateKey(now);
+    const hour = pstHourKey(now);
 
-    // Total counter per platform (all-time)
-    await kv.incr(`clicks:total:${platform}`);
-    // Daily counter per platform, for a simple trend view
-    await kv.incr(`clicks:daily:${platform}:${today}`);
-    // Keep track of which days we have data for
-    await kv.sadd("clicks:days", today);
+    await Promise.all([
+      // Per-platform counters
+      kv.incr(`clicks:total:${platform}`),
+      kv.incr(`clicks:daily:${platform}:${day}`),
+      kv.incr(`clicks:hourly:${platform}:${hour}`),
+      // Combined-across-all-platforms counters, kept in parallel so the
+      // stats dashboard doesn't need to sum every platform at read time
+      kv.incr(`clicks:total:all`),
+      kv.incr(`clicks:daily:all:${day}`),
+      kv.incr(`clicks:hourly:all:${hour}`),
+    ]);
 
     return NextResponse.json({ ok: true });
   } catch {
