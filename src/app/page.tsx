@@ -33,6 +33,14 @@ function track(platform: Platform) {
   }
 }
 
+function trackPageview() {
+  try {
+    navigator.sendBeacon("/api/pageview", new Blob([], { type: "application/json" }));
+  } catch {
+    fetch("/api/pageview", { method: "POST", keepalive: true }).catch(() => {});
+  }
+}
+
 export default function Home() {
   const [gateOpen, setGateOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
@@ -41,6 +49,10 @@ export default function Home() {
   const [revealed, setRevealed] = useState(false);
   const [inApp, setInApp] = useState(false);
   const [checkedInApp, setCheckedInApp] = useState(false);
+
+  useEffect(() => {
+    trackPageview();
+  }, []);
 
   useEffect(() => {
     setInApp(isInAppBrowser());
