@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
 import AgeGate from "@/components/AgeGate";
-import VideoSlot from "@/components/VideoSlot";
 import ImageSlot from "@/components/ImageSlot";
 import { openExternal, isInAppBrowser } from "@/lib/browser";
 
@@ -113,9 +112,15 @@ export default function Home() {
       <AboutPanel open={aboutOpen} onClose={() => setAboutOpen(false)} />
       <ContactPopup open={contactOpen} onClose={() => setContactOpen(false)} />
 
-      {/* Background media */}
+            {/* Background media — static image only, video removed to cut
+          bandwidth usage */}
       <div className="absolute inset-0">
-        <VideoSlot videoSrc="/videos/hero-bg.mp4" posterSrc="/images/hero-bg.jpg" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/images/hero-bg.jpg"
+          alt=""
+          className="h-full w-full object-cover"
+        />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/70 via-black/20 to-black/80" />
       </div>
 
@@ -181,23 +186,15 @@ export default function Home() {
 function ExitInstagramGate() {
   return (
     <div className="fixed inset-0 z-[100] overflow-hidden bg-black">
-      {/* Blurred hero video playing behind the prompt — same source used
-          on the main site, just heavily blurred here to create mystery
-          rather than reveal anything clearly. Plain autoplay, nothing
-          fancy — a prior attempt at skipping the first couple seconds
-          caused a black screen (removing autoPlay also stopped the
-          browser from eagerly downloading the video at all), so this
-          stays simple and just works. */}
-      <video
-        autoPlay
-        muted
-        loop
-        playsInline
-        poster="/images/hero-bg.jpg"
+            {/* Blurred hero image behind the prompt — same photo used on the
+          main site. Video removed here too, for the same bandwidth
+          reason. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/images/hero-bg.jpg"
+        alt=""
         className="absolute inset-0 h-full w-full scale-110 object-cover blur-lg"
-      >
-        <source src="/videos/hero-bg.mp4" type="video/mp4" />
-      </video>
+      />
       <div className="absolute inset-0 bg-black/70" />
 
       {/* No button, no close, no way to dismiss — the person either
