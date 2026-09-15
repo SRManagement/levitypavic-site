@@ -137,45 +137,26 @@ export default function Home() {
 
       {/* Foreground layout */}
       <div className="relative z-10 flex h-full w-full flex-col justify-between px-5 py-6">
-        <div className="flex w-full items-center justify-between">
-          <motion.button
-            onClick={() => setAboutOpen(true)}
-            initial={{ x: "-120%", opacity: 0 }}
-            animate={revealed ? { x: 0, opacity: 1 } : {}}
-            transition={{ type: "spring", stiffness: 480, damping: 26 }}
-            className="font-display text-xs font-medium uppercase tracking-widest text-cream active:opacity-60"
-          >
-            About Me
-          </motion.button>
-
-          <motion.button
-            onClick={() => setContactOpen(true)}
-            initial={{ x: "120%", opacity: 0 }}
-            animate={revealed ? { x: 0, opacity: 1 } : {}}
-            transition={{ type: "spring", stiffness: 480, damping: 26 }}
-            className="font-display text-xs font-medium uppercase tracking-widest text-cream active:opacity-60"
-          >
-            Contact
-          </motion.button>
-        </div>
-
         <div className="flex-1" />
 
         <motion.div
           initial={{ y: "140%", opacity: 0 }}
           animate={revealed ? { y: 0, opacity: 1 } : {}}
           transition={{ type: "spring", stiffness: 420, damping: 30 }}
-          className="flex flex-col items-center pb-2"
+          className="flex flex-col items-center pb-4"
         >
-          <p className="font-mono mb-4 text-[11px] uppercase tracking-[0.35em] text-[#b8b8b8]">
-            All My Links
-          </p>
-          <div className="flex flex-col items-center">
-            <LinkWord label="Exclusive Content" onClick={requestFanvue} accent />
-            <LinkWord label="Telegram" onClick={() => goSocial("telegram")} />
-            <LinkWord label="Instagram" onClick={() => goSocial("instagram")} />
-            <LinkWord label="Snapchat" onClick={() => goSocial("snapchat")} />
-            <LinkWord label="TikTok" onClick={() => goSocial("tiktok")} />
+          <PrimaryButton onClick={requestFanvue} />
+
+          <div className="mt-8 flex flex-col items-center">
+            <p className="font-mono mb-3 text-[9px] uppercase tracking-[0.3em] text-muted">
+              Also On
+            </p>
+            <div className="flex items-center gap-5">
+              <SecondaryLink label="Telegram" onClick={() => goSocial("telegram")} />
+              <SecondaryLink label="Instagram" onClick={() => goSocial("instagram")} />
+              <SecondaryLink label="Snapchat" onClick={() => goSocial("snapchat")} />
+              <SecondaryLink label="TikTok" onClick={() => goSocial("tiktok")} />
+            </div>
           </div>
         </motion.div>
       </div>
@@ -305,8 +286,8 @@ function IntroSequence({
       if (cancelled) return;
 
       // Phase 3: trigger the rest of the page's content to snap in
-      // (About Me / Contact / bottom links), then fade the black away
-      // to reveal the real video background underneath.
+      // (the CTA and secondary social links), then fade the black away
+      // to reveal the real background underneath.
       onReveal();
       await animate(containerOpacity, 0, {
         duration: 0.5,
@@ -372,21 +353,28 @@ function IntroSequence({
   );
 }
 
-function LinkWord({
+function PrimaryButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="font-display ease-premium w-full max-w-xs bg-red px-10 py-5 text-center text-sm font-bold uppercase tracking-[0.25em] text-cream transition-colors active:bg-cream active:text-red"
+    >
+      Exclusive Content
+    </button>
+  );
+}
+
+function SecondaryLink({
   label,
   onClick,
-  accent = false,
 }: {
   label: string;
   onClick: () => void;
-  accent?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
-      className={`font-display ease-premium text-3xl font-bold uppercase leading-[1.05] tracking-tight transition-colors sm:text-5xl ${
-        accent ? "text-red" : "text-cream active:text-red"
-      }`}
+      className="font-mono ease-premium text-[11px] uppercase tracking-widest text-[#999999] transition-colors active:text-cream"
     >
       {label}
     </button>
