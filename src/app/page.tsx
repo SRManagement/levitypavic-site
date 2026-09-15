@@ -147,16 +147,19 @@ export default function Home() {
         >
           <PrimaryButton onClick={requestFanvue} />
 
-          <div className="mt-8 flex flex-col items-center">
-            <p className="font-mono mb-3 text-[9px] uppercase tracking-[0.3em] text-muted">
-              Also On
-            </p>
-            <div className="flex items-center gap-5">
-              <SecondaryLink label="Telegram" onClick={() => goSocial("telegram")} />
-              <SecondaryLink label="Instagram" onClick={() => goSocial("instagram")} />
-              <SecondaryLink label="Snapchat" onClick={() => goSocial("snapchat")} />
-              <SecondaryLink label="TikTok" onClick={() => goSocial("tiktok")} />
-            </div>
+          <div className="mt-8 flex items-center justify-center gap-5">
+            <IconLink label="Telegram" onClick={() => goSocial("telegram")}>
+              <TelegramIcon />
+            </IconLink>
+            <IconLink label="Instagram" onClick={() => goSocial("instagram")}>
+              <InstagramIcon />
+            </IconLink>
+            <IconLink label="Snapchat" onClick={() => goSocial("snapchat")}>
+              <SnapchatIcon />
+            </IconLink>
+            <IconLink label="TikTok" onClick={() => goSocial("tiktok")}>
+              <TikTokIcon />
+            </IconLink>
           </div>
         </motion.div>
       </div>
@@ -364,20 +367,58 @@ function PrimaryButton({ onClick }: { onClick: () => void }) {
   );
 }
 
-function SecondaryLink({
+function IconLink({
   label,
   onClick,
+  children,
 }: {
   label: string;
   onClick: () => void;
+  children: React.ReactNode;
 }) {
   return (
     <button
       onClick={onClick}
-      className="font-mono ease-premium text-[11px] uppercase tracking-widest text-[#999999] transition-colors active:text-cream"
+      aria-label={label}
+      className="ease-premium flex h-9 w-9 items-center justify-center rounded-full border border-white/20 text-cream transition-opacity active:opacity-60"
     >
-      {label}
+      {children}
     </button>
+  );
+}
+
+function TelegramIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 2 11 13" />
+      <path d="M22 2 15 22l-4-9-9-4Z" />
+    </svg>
+  );
+}
+
+function InstagramIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="5" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function SnapchatIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+      <path d="M12 3c-3 0-5 2.2-5 5.2 0 1 .1 2 .1 2.7-.7.3-1.6.6-2.1 1.1-.3.3-.2.8.2.9.6.2 1.1.3 1.1.3s-.2.7-.6 1.2c-.3.4 0 .9.5.9.5 0 1 0 1.4.2.3.9 1.4 2.5 4.4 2.5s4.1-1.6 4.4-2.5c.4-.2.9-.2 1.4-.2.5 0 .8-.5.5-.9-.4-.5-.6-1.2-.6-1.2s.5-.1 1.1-.3c.4-.1.5-.6.2-.9-.5-.5-1.4-.8-2.1-1.1 0-.7.1-1.7.1-2.7C17 5.2 15 3 12 3Z" />
+    </svg>
+  );
+}
+
+function TikTokIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+      <path d="M14 3v11.5a3.5 3.5 0 1 1-3.5-3.5c.3 0 .7 0 1 .1V8a5.9 5.9 0 0 0-1-.1A6 6 0 1 0 16 14V8.5a7 7 0 0 0 4 1.3V7.2A4.5 4.5 0 0 1 16.5 3H14Z" />
+    </svg>
   );
 }
 
