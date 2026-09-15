@@ -122,6 +122,15 @@ export default function Home() {
           className="h-full w-full object-cover"
         />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/70 via-black/20 to-black/80" />
+        {/* Soft vignette — darkens toward all four edges evenly, on top
+            of the existing top/bottom gradient rather than replacing it */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.55) 100%)",
+          }}
+        />
       </div>
 
       {/* Wordmark — positioned against the full screen (matching <main>,
@@ -147,7 +156,7 @@ export default function Home() {
         >
           <PrimaryButton onClick={requestFanvue} />
 
-          <div className="mt-8 flex items-center justify-center gap-5">
+          <div className="mt-14 flex items-center justify-center gap-5">
             <IconLink label="Telegram" onClick={() => goSocial("telegram")}>
               <TelegramIcon />
             </IconLink>
@@ -360,7 +369,7 @@ function PrimaryButton({ onClick }: { onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="font-display ease-premium w-full max-w-xs bg-red px-10 py-5 text-center text-sm font-bold uppercase tracking-[0.25em] text-cream transition-colors active:bg-cream active:text-red"
+      className="font-display ease-premium w-full max-w-xs rounded-full bg-red px-10 py-5 text-center text-sm font-bold uppercase tracking-[0.25em] text-cream transition-colors active:bg-cream active:text-red"
     >
       Exclusive Content
     </button>
