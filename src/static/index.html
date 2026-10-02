@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="robots" content="noindex" />
+  <title>SRM Dashboard</title>
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-title" content="SRM" />
+  <!-- Home-screen icon opens full-screen like an app (no Safari bar, no tab) -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="theme-color" content="#141519" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --page: #141519;
+      --card: #1c1d22;
+      --card-hi: #24252b;
+      --line: rgba(255, 255, 255, 0.06);
+      --line-strong: rgba(255, 255, 255, 0.12);
+      --ink: #ecebf0;
+      --muted: #8d8c96;
+      --faint: #5f5e68;
+      --gross-top: #32d6bb;
+      --gross-bot: #3466e0;
+      --net-top: #ff7f8e;
+      --net-bot: #9b2cf3;
+      --good: #3ddc97;
+      --bad: #ff5c6c;
+      --radius: 14px;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: var(--page); color: var(--ink); font-family: "Source Sans 3", ui-sans-serif, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    body { min-height: 100vh; overflow-x: hidden; }
+    button, input, select, a { font: inherit; color: inherit; }
+    button { cursor: pointer; }
+    .hidden { display: none !important; }
+
+    /* ---------- Loading balls ---------- */
+    .sync { position: fixed; inset: 0; z-index: 100; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px; transition: opacity .5s ease; }
+    .sync.out { opacity: 0; pointer-events: none; }
+    .balls { display: flex; gap: 18px; }
+    .ball { width: 44px; height: 44px; border-radius: 50%; animation: wave 1.6s ease-in-out infinite; box-shadow: inset 0 -3px 7px rgba(0,0,0,.14), inset 0 3px 6px rgba(255,255,255,.16); }
+    .ball:nth-child(1) { background: linear-gradient(180deg, #fffe5d 0%, #f7cd4a 50%, #ef8f35 100%); }
+    .ball:nth-child(2) { background: linear-gradient(180deg, #eb572d 0%, #ea3e4b 50%, #ea3399 100%); animation-delay: .12s; }
+    .ball:nth-child(3) { background: linear-gradient(180deg, #ea33f7 0%, #ca2cf6 50%, #9327f4 100%); animation-delay: .24s; }
+    .ball:nth-child(4) { background: linear-gradient(180deg, #357af6 0%, #50b1f9 50%, #78fbfd 100%); animation-delay: .36s; }
+    .ball:nth-child(5) { background: linear-gradient(180deg, #8af7c6 0%, #72f597 50%, #5fef6c 100%); animation-delay: .48s; }
+    @keyframes wave { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-12px); } }
+    .sync-label { margin: 0; font-size: 12px; letter-spacing: .24em; text-transform: uppercase; color: rgba(255,255,255,.55); font-weight: 600; min-height: 1em; }
+    @media (prefers-reduced-motion: reduce) { .ball { animation: none; } }
+    /* ---------- Boot logo intro ----------
+       Loader cuts out instantly -> "SRM" centered, a shine sweeps through the letters (only the
+       letters, never the black) -> "Dashboard" slides out of the M, pushing SRM left so the line
+       stays centered -> the whole thing (text + black) fades away, revealing the UI. ~1.6s.
+       Everything moves with transform / opacity only, so it runs on the GPU at full frame rate. */
+    .intro { position: fixed; inset: 0; z-index: 101; display: flex; align-items: center; justify-content: center; pointer-events: none; will-change: opacity; }
+    .intro-bg { position: absolute; inset: 0; background: #000; }
+    .intro-line { position: relative; display: flex; align-items: flex-start; font-size: min(54px, 11vw); font-weight: 700; letter-spacing: .02em; line-height: normal; white-space: nowrap; color: var(--ink); transform-origin: 0 0; will-change: transform; }
+    .intro-srm { position: relative; display: block; overflow: hidden; background: #000; box-shadow: 0 0 0 6px #000; isolation: isolate; will-change: transform; }
+    /* The shine: two skewed bars that only change the letters. Multiply darkens the letters a little
+       on either side of the streak; color-dodge lifts the streak's core to pure white. Both leave
+       black exactly black, so nothing shows outside the letters. */
+    .shine { position: absolute; top: -25%; bottom: -25%; left: 0; width: 44%; transform: translate3d(-125%, 0, 0) skewX(-20deg); will-change: transform; pointer-events: none; }
+    .shine.a { mix-blend-mode: multiply; background: linear-gradient(90deg, rgba(160,159,170,0) 14%, rgba(160,159,170,.85) 38%, rgba(160,159,170,0) 47%, rgba(160,159,170,0) 53%, rgba(160,159,170,.85) 62%, rgba(160,159,170,0) 86%); }
+    .shine.b { mix-blend-mode: color-dodge; background: linear-gradient(90deg, rgba(255,255,255,0) 42%, #fff 50%, rgba(255,255,255,0) 58%); }
+    .intro-win { display: block; overflow: hidden; will-change: transform; }
+    .intro-win > span { display: block; width: max-content; padding-left: .26em; color: var(--muted); font-weight: 500; will-change: transform; }
+    .brand.hold { visibility: hidden; }
+
+    /* ---------- Shell ---------- */
+    .app { max-width: 1180px; margin: 0 auto; padding: 22px 24px 48px; }
+    .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+    .brand { margin: 0; font-size: 18px; font-weight: 700; letter-spacing: .02em; }
+    .brand span { color: var(--muted); font-weight: 500; }
+    .top-right { display: flex; align-items: center; gap: 8px; }
+    .clock { color: var(--muted); font-size: 13px; margin-right: 6px; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--card-hi); font-size: 13px; font-weight: 600; text-decoration: none; white-space: nowrap; }
+    .btn:hover { border-color: rgba(255,255,255,.28); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--good); }
+    .dot.alert { background: var(--bad); box-shadow: 0 0 8px var(--bad); }
+    .banner { background: rgba(255, 92, 108, .1); border: 1px solid rgba(255, 92, 108, .3); color: #ffb3bb; border-radius: 12px; padding: 10px 14px; font-size: 13px; margin-bottom: 14px; }
+    .banner div + div { margin-top: 4px; }
+
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); }
+    .tiles { display: grid; grid-template-columns: 3fr 3fr 2fr 2fr 2fr; gap: 12px; margin-bottom: 12px; }
+    .tile { padding: 16px 18px; cursor: pointer; text-align: left; }
+    .tile:hover { border-color: var(--line-strong); }
+    .tile .k { font-size: 12px; color: var(--muted); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+    .tile .v { margin-top: 6px; font-size: 28px; font-weight: 700; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+    .grad-net { background: linear-gradient(90deg, var(--net-top), #c35cff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .grad-gross { background: linear-gradient(90deg, var(--gross-top), #5b8cff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .tile.neg .v { background: none; color: var(--bad); }
+    .tile.small { padding: 16px 14px; }
+    .tile.small .v { font-size: clamp(17px, 1.9vw, 22px); }
+
+    .panel { padding: 20px 22px; margin-bottom: 12px; }
+    .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+    .panel-title { margin: 0; font-size: 16px; font-weight: 600; }
+    .panel-sub { margin-left: 10px; color: var(--faint); font-size: 13px; }
+    .head-right { display: flex; align-items: center; gap: 16px; }
+    .legend { display: flex; gap: 16px; font-size: 13px; color: var(--muted); }
+    .legend span { display: inline-flex; align-items: center; gap: 8px; }
+    .swatch { width: 22px; height: 6px; border-radius: 3px; }
+    .swatch.gross { background: linear-gradient(90deg, var(--gross-bot), var(--gross-top)); }
+    .swatch.net { background: linear-gradient(90deg, var(--net-bot), var(--net-top)); }
+    .range { position: relative; }
+    /* Split pill: left = custom dates (calendar), right = presets dropdown */
+    .split-pill { display: inline-flex; }
+    .split-pill .btn { gap: 7px; }
+    .split-l { border-radius: 999px 0 0 999px; border-right-width: 0; color: var(--muted); }
+    .split-l.on { color: var(--ink); }
+    .split-r { border-radius: 0 999px 999px 0; }
+    .split-l svg { flex: none; }
+    /* Calendar */
+    .cal-pop { position: absolute; right: 0; top: calc(100% + 8px); z-index: 45; width: 600px; padding: 18px 18px 16px; background: var(--card-hi); border: 1px solid var(--line-strong); border-radius: 18px; box-shadow: 0 16px 40px rgba(0,0,0,.55); }
+    .cal-months { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+    .cal-head { display: grid; grid-template-columns: 34px 1fr 34px; align-items: center; margin-bottom: 10px; }
+    .cal-head b { text-align: center; font-size: 15px; font-weight: 600; }
+    .cal-nav { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line-strong); background: var(--card); display: inline-flex; align-items: center; justify-content: center; padding: 0; color: var(--ink); }
+    .cal-nav:disabled { opacity: .3; cursor: default; }
+    .cal-nav-m { visibility: hidden; }   /* desktop: the left month carries the back arrow */
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+    .cal-dow { text-align: center; font-size: 11px; font-weight: 600; color: var(--faint); padding: 4px 0 6px; letter-spacing: .04em; }
+    .cal-day { height: 36px; border-radius: 9px; border: 0; background: var(--card); color: var(--ink); font-size: 13px; font-variant-numeric: tabular-nums; padding: 0; }
+    .cal-day:hover:not(:disabled) { background: #33343c; }
+    .cal-day.out { background: none; color: transparent; pointer-events: none; }
+    .cal-day:disabled { background: none; color: var(--faint); opacity: .45; cursor: default; }
+    .cal-day.today { box-shadow: inset 0 0 0 1.5px var(--good); }
+    .cal-day.in { background: rgba(195, 92, 255, .18); color: #f1d9ff; border-radius: 6px; }
+    .cal-day.end { background: linear-gradient(135deg, var(--net-top), var(--net-bot)); color: #fff; font-weight: 700; }
+    .cal-foot { display: flex; align-items: center; gap: 10px; margin-top: 16px; }
+    .cal-sum { flex: 1; color: var(--muted); font-size: 13px; }
+    .cal-foot .btn { height: 38px; padding: 0 18px; }
+    .cal-apply { border: 0; color: #fff; background: linear-gradient(90deg, var(--net-bot), #d24bd8 60%, var(--net-top)); }
+    .cal-apply:disabled { opacity: .45; }
+    @media (max-width: 760px) {
+      .cal-pop { position: fixed; left: 12px; right: 12px; top: auto; bottom: 12px; width: auto; }
+      .cal-months { grid-template-columns: 1fr; }
+      .cal-months > :nth-child(1) { display: none; }   /* phone: one month at a time */
+      .cal-nav-m { visibility: visible !important; }
+      .cal-day { height: 40px; font-size: 14px; }
+      .split-l span { max-width: 118px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    }
+    .menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; min-width: 170px; padding: 6px; background: var(--card-hi); border: 1px solid var(--line-strong); border-radius: 12px; box-shadow: 0 12px 30px rgba(0,0,0,.45); }
+    .menu button { display: block; width: 100%; text-align: left; padding: 8px 12px; border: 0; border-radius: 8px; background: none; font-size: 14px; }
+    .menu button:hover, .menu button.on { background: rgba(255,255,255,.07); }
+    .chart-box { position: relative; height: 300px; }
+    .chart-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--faint); font-size: 14px; pointer-events: none; }
+
+    .water { display: grid; gap: 2px; font-size: 15px; font-variant-numeric: tabular-nums; }
+    .water div { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--line); }
+    .water div:last-child { border-bottom: 0; font-weight: 700; font-size: 17px; padding-top: 10px; }
+    .water span { color: var(--muted); }
+    .water div:last-child span { color: var(--ink); }
+
+    /* ---------- Modals ---------- */
+    .overlay { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(5, 5, 8, .72); backdrop-filter: blur(4px); }
+    .modal { width: min(420px, 100%); max-height: 88vh; overflow: auto; background: var(--card); border: 1px solid var(--line-strong); border-radius: 18px; padding: 18px 20px 20px; }
+    .modal.wide { width: min(680px, 100%); }
+    .modal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+    .modal-head h3 { margin: 0; font-size: 17px; }
+    .modal-head h3.caps { letter-spacing: .05em; }
+    .rate-hint { margin: -4px 2px 18px; }
+    .rate-hint.pending { color: #F7CD4A; }
+    .rate-hint.pending b { color: #F7CD4A; }
+    .x { width: 32px; height: 32px; border-radius: 10px; border: 1px solid var(--line-strong); background: var(--card-hi); display: inline-flex; align-items: center; justify-content: center; padding: 0; flex: none; }
+    .field { display: block; margin-bottom: 14px; }
+    .field > span { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+    .input { width: 100%; height: 40px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line-strong); background: var(--page); outline: none; }
+    .input:focus { border-color: rgba(255,255,255,.3); }
+    select.input { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: calc(100% - 18px) 17px, calc(100% - 13px) 17px; background-size: 5px 5px; background-repeat: no-repeat; }
+    .primary { width: 100%; height: 42px; border: 0; border-radius: 10px; font-weight: 700; color: #fff; background: linear-gradient(90deg, var(--net-bot), #d24bd8 60%, var(--net-top)); }
+    .primary:disabled { opacity: .6; }
+    .sync-pill { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--card-hi); font-size: 13px; font-weight: 600; text-decoration: none; }
+    .mark { font-weight: 800; display: inline-flex; justify-content: center; width: 16px; flex: none; }
+    .mark.glow { color: #5dffb4; text-shadow: 0 0 4px #3ddc97, 0 0 10px rgba(61,220,151,.95), 0 0 18px rgba(61,220,151,.6); }
+    #modBg .modal-head { align-items: center; }
+    /* Fanvue sync status: quiet footer line at the bottom of Moderator */
+    .mod-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
+    .sync-foot { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 12px; color: var(--faint); text-decoration: none; }
+    a.sheet-pill { color: var(--ink); }
+    a.sheet-pill:hover { border-color: rgba(255,255,255,.28); }
+    .sync-foot .mark { width: auto; font-size: 11px; }
+    .sync-foot.bad { color: #ffb3bb; }
+    .sync-foot.bad:hover { text-decoration: underline; }
+    button.sync-pill { cursor: pointer; color: var(--ink); }
+    button.sync-pill:hover { border-color: rgba(255,255,255,.28); }
+    .caution { width: 15px; height: 15px; flex: none; display: block; filter: drop-shadow(0 0 5px rgba(247,205,74,.45)); }
+    .sync-pill .caution { width: 16px; }
+    /* ---------- Notification bell ---------- */
+    .bell-wrap { position: relative; }
+    .btn.bell { width: 36px; padding: 0; justify-content: center; position: relative; }
+    .bell-badge { position: absolute; top: -5px; left: -5px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--bad); color: #fff; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 0 0 2px var(--page); font-variant-numeric: tabular-nums; }
+    .notif-menu { position: absolute; right: 0; top: calc(100% + 8px); z-index: 40; width: 320px; max-width: calc(100vw - 32px); background: var(--card-hi); border: 1px solid var(--line-strong); border-radius: 14px; box-shadow: 0 14px 34px rgba(0,0,0,.5); overflow: hidden; }
+    .notif-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px 10px 14px; border-bottom: 1px solid var(--line); font-size: 13px; font-weight: 600; }
+    .notif-head button { border: 0; background: none; color: var(--muted); font-size: 12px; font-weight: 600; padding: 4px 6px; border-radius: 6px; }
+    .notif-head button:hover { color: var(--ink); background: rgba(255,255,255,.06); }
+    .notif-list { max-height: 320px; overflow-y: auto; }
+    .notif { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto auto; align-items: center; gap: 10px; padding: 9px 8px 9px 14px; border-bottom: 1px solid var(--line); font-size: 13px; }
+    .notif:last-child { border-bottom: 0; }
+    .notif .ic { display: inline-flex; justify-content: center; font-weight: 800; color: var(--good); }
+    .notif .ic .caution { width: 14px; height: 14px; }
+    .notif .txt { min-width: 0; }
+    .notif .txt b { display: block; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .notif .txt span { color: var(--muted); font-size: 12px; }
+    .notif .txt span.when { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+    .notif .amt { font-weight: 600; font-variant-numeric: tabular-nums; }
+    /* Card charge the bank hasn't posted yet */
+    .pend { display: inline-block; margin-left: 7px; padding: 1px 7px; border-radius: 999px; font-size: 11px; font-weight: 600; line-height: 16px; vertical-align: 1px; color: #F7CD4A; background: rgba(247, 205, 74, .12); font-style: normal; }
+    .notif .clr { width: 24px; height: 24px; border: 0; border-radius: 6px; background: none; color: var(--faint); display: inline-flex; align-items: center; justify-content: center; padding: 0; }
+    .notif .clr:hover { color: var(--ink); background: rgba(255,255,255,.07); }
+    .notif .nacts { display: inline-flex; align-items: center; gap: 4px; }
+    .notif .vfy { width: 24px; height: 24px; border: 1px solid rgba(61, 220, 151, .35); border-radius: 7px; background: rgba(61, 220, 151, .1); color: var(--good); display: inline-flex; align-items: center; justify-content: center; padding: 0; }
+    .notif .vfy:hover { background: rgba(61, 220, 151, .2); }
+    .notif .vfy:disabled { opacity: .5; }
+    .notif .ok-txt { font-style: normal; color: var(--good); }
+    .notif.new .txt { cursor: pointer; }
+    .notif-empty { padding: 18px 14px; color: var(--faint); font-size: 13px; text-align: center; }
+    @media (max-width: 760px) { .notif-menu { position: fixed; left: 16px; right: 16px; top: 64px; width: auto; max-width: none; } }
+    .mark.ok { color: var(--good); }
+    .mark.no { color: var(--bad); }
+    .tax-row { display: flex; align-items: center; justify-content: space-between; margin: 4px 0 10px; font-weight: 600; }
+    .switch { width: 46px; height: 26px; border-radius: 999px; border: 0; background: #3a3b42; position: relative; transition: background .2s; }
+    .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform .2s; }
+    .switch.on { background: linear-gradient(90deg, var(--net-bot), var(--net-top)); }
+    .switch.on::after { transform: translateX(20px); }
+    .tax-line { display: flex; gap: 8px; }
+    .tax-line .input { flex: 1; }
+    .tax-line .primary { width: auto; padding: 0 18px; }
+    .hint { color: var(--muted); font-size: 13px; margin: 8px 0 0; }
+    .bank-btn { width: 100%; height: 40px; border-radius: 10px; border: 1px dashed var(--line-strong); background: none; font-weight: 600; }
+    .bank-btn:hover { border-color: rgba(255,255,255,.3); }
+    .bank-on { display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line-strong); background: var(--page); font-size: 14px; }
+    .bank-on small { color: var(--muted); margin-left: auto; }
+
+    .desk-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+    .tab { height: 34px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line-strong); background: none; font-size: 13px; font-weight: 600; color: var(--muted); }
+    .tab.on { background: var(--ink); color: #15161a; border-color: var(--ink); }
+    .desk-bar select.input { width: auto; height: 34px; padding-right: 32px; background-position: calc(100% - 18px) 14px, calc(100% - 13px) 14px; }
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; margin-bottom: 8px; background: var(--card-hi); }
+    .row b { font-weight: 600; }
+    .row .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+    .row .acts { display: flex; align-items: center; gap: 6px; flex: none; }
+    /* Card charge / payout waiting for ✓ or ✕: name, date (weekday), time it hit the card; amount + buttons on the right */
+    .row.charge { align-items: stretch; gap: 14px; padding: 13px 14px 12px; }
+    .ch-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .ch-title { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 0; line-height: 1.25; }
+    .ch-title b { overflow-wrap: anywhere; }
+    .ch-date { margin-top: 7px; font-size: 14px; font-weight: 600; color: var(--ink); line-height: 1.3; }
+    .ch-date span { color: var(--muted); font-weight: 500; }
+    .ch-time { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; line-height: 1.35; margin-top: 1px; }
+    .ch-time small { color: var(--faint); font-size: 12px; }
+    .ch-why { font-size: 12px; color: var(--faint); margin-top: 5px; line-height: 1.35; }
+    .ch-side { flex: none; display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between; gap: 12px; }
+    .ch-amt { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .ch-side .acts { gap: 8px; }
+    .ch-side .icon { width: 40px; height: 40px; border-radius: 11px; display: inline-flex; align-items: center; justify-content: center; }
+    .ch-side .icon svg { width: 16px; height: 16px; }
+    .row.charge.payout { border-color: rgba(61, 220, 151, .28); }
+    .vsec { display: flex; justify-content: space-between; align-items: baseline; margin: 6px 2px 8px; color: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+    .vsec b { color: var(--ink); font-size: 14px; letter-spacing: 0; text-transform: none; font-variant-numeric: tabular-nums; }
+    .vsec + .vgroup { margin-top: 0; }
+    .vgroup { border: 1px solid var(--line); border-radius: 12px; background: var(--card-hi); margin-bottom: 6px; overflow: hidden; }
+    .vhead { display: grid; grid-template-columns: minmax(0, 1fr) auto 14px; align-items: center; gap: 4px 12px; width: 100%; padding: 11px 14px 10px; border: 0; background: none; text-align: left; }
+    .vhead b { font-weight: 600; }
+    .vhead .sub { color: var(--muted); font-size: 13px; margin-top: 1px; }
+    .vhead .tot { font-weight: 700; font-variant-numeric: tabular-nums; }
+    .vhead .chev { color: var(--faint); transition: transform .15s; }
+    .vgroup.open > .vhead .chev { transform: rotate(90deg); }
+    .vbar { grid-column: 1 / -1; height: 3px; border-radius: 2px; background: rgba(255,255,255,.05); }
+    .vbar i { display: block; height: 100%; border-radius: 2px; background: rgba(255,255,255,.28); }
+    .vcat > .vhead { grid-template-columns: minmax(0, 1fr) auto 14px; }
+    .vcat > .vhead b { font-weight: 500; color: var(--muted); font-size: 14px; }
+    .vcat > .vitems { padding: 6px 8px 8px; }
+    .vcat > .vitems > .vgroup { margin-bottom: 6px; background: var(--card); }
+    .opex-month { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 2px 12px; }
+    .opex-pick { height: 34px; display: inline-flex; align-items: center; gap: 8px; padding: 0 12px; font-weight: 600; }
+    .opex-pick .chev { transform: rotate(90deg); transition: transform .18s ease; color: var(--muted); }
+    .opex-pick.open .chev { transform: rotate(-90deg); }
+    .mp { margin: 0 2px 12px; padding: 12px; border: 1px solid var(--line-strong); border-radius: 14px; background: var(--card); animation: mpIn .16s ease; }
+    @keyframes mpIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+    .mp-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .mp-head b { font-size: 15px; }
+    .mp-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+    .mp-m, .mp-all { height: 36px; border: 1px solid transparent; border-radius: 10px; background: transparent; color: var(--ink); font: inherit; font-weight: 600; font-size: 13px; cursor: pointer; }
+    .mp-m:not(:disabled):hover, .mp-all:not(.on):hover { border-color: var(--line-strong); }
+    .mp-m:disabled { opacity: .28; cursor: default; }
+    .mp-m.on, .mp-all.on { border-color: transparent; color: #fff; background: linear-gradient(135deg, var(--net-top), var(--net-bot)); }
+    .mp-all { width: 100%; margin-top: 8px; border-color: var(--line); font-weight: 500; color: var(--muted); }
+    .opex-pct { display: flex; flex-direction: column; align-items: flex-end; }
+    .opex-pct b { font-size: 15px; }
+    .opex-pct small { color: var(--muted); font-size: 12px; }
+    .vitem.month { grid-template-columns: minmax(0, 1fr) auto; padding: 8px 6px; }
+    .vitem .n small.tag { display: inline-block; margin-left: 8px; padding: 1px 7px; border-radius: 999px; font-size: 11px; font-weight: 600; line-height: 16px; vertical-align: 1px; }
+    .vitem .n small.tag.live { color: var(--good); background: rgba(61, 220, 151, .12); }
+    .vitem .n small.tag.await { color: #F7CD4A; background: rgba(247, 205, 74, .12); }
+    .vitem .n small.tag.logged { color: var(--muted); background: rgba(255, 255, 255, .06); }
+    .row.draft { border-color: rgba(247,205,74,.35); }
+    .grow-min { min-width: 0; }
+    .amt-edit { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-size: 14px; }
+    .amt-edit .input { width: 104px; height: 32px; padding: 0 8px; font-variant-numeric: tabular-nums; }
+    .vitems { display: none; border-top: 1px solid var(--line); padding: 4px 6px 8px 14px; }
+    .vgroup.open > .vitems { display: block; }
+    .vitem { display: grid; grid-template-columns: 58px minmax(0, 1fr) auto 28px; align-items: center; gap: 10px; padding: 6px 0; font-size: 13px; border-bottom: 1px solid var(--line); }
+    .vitem:last-of-type { border-bottom: 0; }
+    .vitem .d { color: var(--muted); }
+    .vitem .n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .vitem .n small { color: var(--muted); margin-left: 6px; }
+    .vitem b { font-weight: 600; font-variant-numeric: tabular-nums; }
+    .vitem .icon { width: 26px; height: 26px; border-radius: 7px; }
+    .linkbtn { border: 0; background: none; color: var(--muted); font-size: 12px; padding: 8px 0 0; text-decoration: underline; text-underline-offset: 2px; }
+    .linkbtn:hover { color: var(--bad); }
+    .icon { width: 32px; height: 32px; border-radius: 9px; border: 1px solid var(--line-strong); background: var(--card); padding: 0; }
+    .icon.ok { color: var(--good); }
+    .icon.no { color: var(--bad); }
+    .empty { color: var(--faint); text-align: center; padding: 24px 0; }
+    .err { color: var(--bad); font-size: 13px; min-height: 18px; margin: 8px 0 0; }
+
+    @media (max-width: 760px) {
+      .app { padding: 14px 16px 36px; }
+      .top { flex-wrap: wrap; }
+      .clock { display: none; }
+      .tiles { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+      .tile { grid-column: span 3; padding: 12px 14px; }
+      .tile .v { font-size: 22px; }
+      .tile.small { grid-column: span 2; padding: 10px 10px; }
+      .tile.small .k { font-size: 10px; letter-spacing: .04em; }
+      .tile.small .v { font-size: 15px; margin-top: 4px; }
+      .vitem .n small { display: block; margin: 1px 0 0; }
+      .panel { padding: 16px 14px; }
+      .panel-sub { display: block; margin: 2px 0 0; }
+      .legend { gap: 10px; }
+      .chart-box { height: 230px; }
+      .balls { gap: 12px; }
+      .ball { width: 34px; height: 34px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="sync" id="sync">
+    <div class="balls" aria-hidden="true"><i class="ball"></i><i class="ball"></i><i class="ball"></i><i class="ball"></i><i class="ball"></i></div>
+    <p class="sync-label" id="syncLabel">Syncing data</p>
+  </div>
+
+  <div class="intro hidden" id="intro" aria-hidden="true">
+    <div class="intro-bg" id="introBg"></div>
+    <div class="intro-line" id="introLine"><span class="intro-srm" id="introSrm">SRM<i class="shine a"></i><i class="shine b"></i></span><span class="intro-win" id="introWin"><span id="introWord">Dashboard</span></span></div>
+  </div>
+
+  <div class="overlay hidden" id="gate">
+    <form class="modal" id="loginForm">
+      <div class="modal-head"><h3>SRM Dashboard</h3></div>
+      <label class="field"><span>Password</span><input class="input" id="pw" type="password" autocomplete="current-password" required /></label>
+      <button class="primary" type="submit">Unlock</button>
+      <p class="err" id="loginErr"></p>
+    </form>
+  </div>
+
+  <div class="app hidden" id="app">
+    <header class="top">
+      <h1 class="brand hold" id="brand">SRM <span>Dashboard</span></h1>
+      <div class="top-right">
+        <span class="clock" id="clock"></span>
+        <div class="bell-wrap">
+          <button class="btn bell" id="bellBtn" type="button" aria-label="Notifications" aria-haspopup="true" aria-expanded="false">
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+            <span class="bell-badge hidden" id="bellBadge"></span>
+          </button>
+          <div class="notif-menu hidden" id="notifMenu" role="dialog" aria-label="Notifications"></div>
+        </div>
+        <button class="btn" id="openMod" type="button">Moderator</button>
+      </div>
+    </header>
+
+    <div class="banner hidden" id="banner"></div>
+
+    <section class="tiles">
+      <button class="card tile" data-open-mod id="tileNet"><div class="k">Net total</div><div class="v grad-net" id="vNet">–</div></button>
+      <button class="card tile" data-open-mod><div class="k">Gross total</div><div class="v grad-gross" id="vGross">–</div></button>
+      <button class="card tile small" data-open-mod><div class="k">Chatter cut</div><div class="v" id="vChatter">–</div></button>
+      <button class="card tile small" data-open-mod><div class="k">Fanvue cut</div><div class="v" id="vFanvue">–</div></button>
+      <button class="card tile small" id="tileOpex"><div class="k">Opex</div><div class="v" id="vOpex">–</div></button>
+    </section>
+
+    <section class="card panel">
+      <div class="panel-head">
+        <div><h2 class="panel-title" style="display:inline">Earnings</h2><span class="panel-sub" id="rangeDates"></span></div>
+        <div class="head-right">
+          <div class="legend"><span><i class="swatch gross"></i>Gross</span><span><i class="swatch net"></i>Net</span></div>
+          <div class="range">
+            <div class="split-pill">
+              <button class="btn split-l" id="customBtn" type="button" aria-label="Pick custom dates"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16.5" rx="3"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></svg><span id="customLabel">Custom</span></button>
+              <button class="btn split-r" id="rangeBtn" type="button"><span id="rangeLabel">Today</span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+            </div>
+            <div class="menu hidden" id="rangeMenu"></div>
+            <div class="cal-pop hidden" id="calPop" role="dialog" aria-label="Pick dates"></div>
+          </div>
+        </div>
+      </div>
+      <div class="chart-box"><canvas id="chart" aria-label="Gross and net earnings chart" role="img"></canvas><div class="chart-empty hidden" id="chartEmpty">No earnings in this range yet</div></div>
+    </section>
+
+    <section class="card panel">
+      <div class="water" id="water"></div>
+    </section>
+  </div>
+
+  <div class="overlay hidden" id="modBg">
+    <div class="modal">
+      <div class="modal-head">
+        <a class="sync-pill sheet-pill" id="viewSheet" href="#" target="_blank" rel="noopener">View sheet ↗</a>
+        <button class="x" type="button" data-close aria-label="Close"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div class="field"><span>Bank</span><div id="bankBox"></div></div>
+      <label class="field"><span>Model</span><select class="input" id="modelSelect"></select></label>
+      <label class="field"><span>Fanvue % of gross</span><input class="input" id="fanvueRate" type="number" min="0" max="90" step="0.1" inputmode="decimal" /></label>
+      <label class="field"><span>Chatter % of net messages + tips</span><input class="input" id="chatterRate" type="number" min="0" max="90" step="0.1" inputmode="decimal" /></label>
+      <p class="hint rate-hint" id="rateHint"></p>
+      <div class="tax-row"><span>Tax cut</span><button class="switch" id="taxSwitch" type="button" role="switch" aria-checked="false" aria-label="Include tax"></button></div>
+      <div class="tax-line">
+        <input class="input" id="taxPct" type="text" readonly placeholder="Not calculated" />
+        <button class="primary" id="taxCalc" type="button">Calculate</button>
+      </div>
+      <p class="hint" id="taxHint">Estimates 2026 federal + California + self-employment tax on this year's profit.</p>
+      <div class="mod-foot">
+        <a class="sync-foot" id="syncPill" href="/api/fanvue/start"></a>
+        <button class="sync-pill" id="openExpenses" type="button"></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay hidden" id="expBg">
+    <div class="modal wide">
+      <div class="modal-head">
+        <h3 class="caps">EXPENSES</h3>
+        <button class="x" type="button" data-close aria-label="Close"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div class="desk-bar">
+        <button class="tab" data-tab="verified" type="button">Verified</button>
+        <button class="tab on" data-tab="pending" type="button">New</button>
+        <button class="tab" data-tab="trash" type="button">Trash</button>
+      </div>
+      <div id="deskBody"></div>
+    </div>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const state = { range: "today", data: null, chart: null, holdAnim: false, desk: null, tab: "pending", open: new Set(), model: "all" };
+    const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    const usd = (n, cents = true) => {
+      const v = Number(n || 0);
+      const opts = cents ? { minimumFractionDigits: 2, maximumFractionDigits: 2 } : { maximumFractionDigits: 0 };
+      return (v < 0 ? "-$" : "$") + Math.abs(v).toLocaleString("en-US", opts);
+    };
+
+    class AuthError extends Error {}
+    async function api(path, body) {
+      const res = await fetch(path, body === undefined ? {} : {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+      });
+      if (res.status === 401) throw new AuthError();
+      if (!res.ok) {
+        let msg = res.statusText;
+        try { msg = (await res.json()).detail || msg; } catch {}
+        throw new Error(msg);
+      }
+      return res.json();
+    }
+
+    // ---------- Loading screen ----------
+    function showSync(text) { $("syncLabel").textContent = text || "Syncing data"; $("sync").classList.remove("hidden", "out"); }
+    function hideSync() { $("sync").classList.add("out"); setTimeout(() => $("sync").classList.add("hidden"), 500); }
+
+    // ---------- Boot: Fanvue sync (and the sheet re-read) on every load ----------
+    async function boot() {
+      showSync();
+      state.holdAnim = true;  // draw the chart still while hidden; it grows up from the bottom on reveal
+      const flag = new URLSearchParams(location.search).get("fanvue");
+      let showIntro = false;
+      try {
+        // Fanvue and the bank sync at the same time (they don't depend on each other).
+        const bankSync = api("/api/bank/sync", {}).catch(() => {});
+        let r = await api("/api/sync", {});
+        if (!r.connected && !flag) { location.href = "/api/fanvue/start"; return; }
+        for (let i = 0; i < 80 && r.connected && !r.done; i++) {
+          $("syncLabel").textContent = "Pulling Fanvue history · " + new Date(r.through + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+          r = await api("/api/sync", {});
+        }
+        await bankSync;
+        // Show the app (under the black loader) BEFORE drawing, so the chart lays out at full size
+        // instead of stretching in sideways from a hidden 0-width box.
+        $("gate").classList.add("hidden");
+        $("app").classList.remove("hidden");
+        await loadDashboard(true);
+        if (flag) history.replaceState({}, "", "/");
+        showIntro = true;
+      } catch (err) {
+        if (err instanceof AuthError) { $("app").classList.add("hidden"); $("gate").classList.remove("hidden"); $("pw").focus(); }
+        else { $("app").classList.remove("hidden"); showBanner(["Couldn't load: " + err.message]); showIntro = true; }
+      }
+      if (showIntro) await playIntro();
+      else { hideSync(); revealChart(); }
+    }
+
+    /** The boot logo moment (see the .intro CSS). Every step is scheduled up front on one timeline
+        (no waiting between steps), so nothing stutters. Ends with the real top-left logo in place. */
+    async function playIntro() {
+      const intro = $("intro"), line = $("introLine"), srm = $("introSrm"), win = $("introWin"), word = $("introWord"), brand = $("brand");
+      const done = () => { brand.classList.remove("hold"); intro.classList.add("hidden"); intro.getAnimations({ subtree: true }).forEach((a) => a.cancel()); };
+      if (matchMedia("(prefers-reduced-motion: reduce)").matches || !line.animate || $("app").classList.contains("hidden")) {
+        $("sync").classList.add("hidden"); done(); revealChart(); return;
+      }
+      try { await Promise.race([document.fonts.ready, new Promise((ok) => setTimeout(ok, 700))]); } catch (e) { /* no fonts API */ }
+      intro.classList.remove("hidden");
+      brand.classList.remove("hold");                    // the real logo waits underneath
+      const W = win.getBoundingClientRect().width, half = W / 2;
+      const T = { shine: 620, dash: 560, dashLen: 460, fade: 1100, fadeLen: 520 };
+      const slide = "cubic-bezier(.22,.9,.24,1)", opts = (delay, duration, easing) => ({ delay, duration, easing, fill: "both" });
+      // 1) shine through SRM (SRM starts centered on its own: shifted right by half of "Dashboard")
+      const sweep = [{ transform: "translate3d(-125%,0,0) skewX(-20deg)" }, { transform: "translate3d(260%,0,0) skewX(-20deg)" }];
+      srm.querySelectorAll(".shine").forEach((el) => el.animate(sweep, opts(40, T.shine, "cubic-bezier(.45,0,.3,1)")));
+      // 2) "Dashboard" slides out of the M while SRM moves left (the line ends up centered)
+      const shift = [{ transform: `translate3d(${half}px,0,0)` }, { transform: "translate3d(0,0,0)" }];
+      srm.animate(shift, opts(T.dash, T.dashLen, slide));
+      win.animate(shift, opts(T.dash, T.dashLen, slide));
+      word.animate([{ transform: `translate3d(${-W}px,0,0)` }, { transform: "translate3d(0,0,0)" }], opts(T.dash, T.dashLen, slide));
+      // 3) text and black fade out together, revealing the dashboard (the chart rises as it clears)
+      const fade = intro.animate([{ opacity: 1 }, { opacity: 0 }], opts(T.fade, T.fadeLen, "cubic-bezier(.4,0,.2,1)"));
+      $("sync").classList.add("hidden");                 // the loader cuts out instantly, no fade
+      setTimeout(revealChart, T.fade);
+      try { await fade.finished; } catch (e) { revealChart(); }
+      done();
+    }
+
+    /** Boot reveal: bars rise out of the baseline (same motion as switching ranges), as the loader fades. */
+    function revealChart() {
+      state.holdAnim = false;
+      const c = state.chart;
+      if (!c) return;
+      c.options.animation = { duration: 800, easing: "easeOutQuart" };
+      c.reset();
+      c.update();
+    }
+
+    async function loadDashboard(fresh) {
+      const q = new URLSearchParams({ range: state.range });
+      if (state.range === "custom" && state.custom) { q.set("start", state.custom.start); q.set("end", state.custom.end); }
+      if (fresh) q.set("fresh", "1");
+      render(await api("/api/dashboard?" + q));
+    }
+
+    // ---------- Render ----------
+    function showBanner(lines) {
+      $("banner").innerHTML = lines.map((l) => `<div>${esc(l)}</div>`).join("");
+      $("banner").classList.toggle("hidden", !lines.length);
+    }
+
+    function render(d) {
+      state.data = d;
+      const t = d.totals;
+      $("vNet").textContent = usd(t.net, false);
+      $("tileNet").classList.toggle("neg", t.net < 0);
+      $("vGross").textContent = usd(t.gross, false);
+      $("vChatter").textContent = usd(t.chatter_cut);
+      $("vFanvue").textContent = usd(t.fanvue_cut);
+      $("vOpex").textContent = usd(t.opex);
+      $("clock").textContent = d.clock;
+      // Expenses status lives in Moderator: green check when up to date, yellow caution when new ones wait.
+      const pending = d.pending_expenses || 0;
+      $("openExpenses").innerHTML = pending
+        ? `<span class="mark"><svg class="caution" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.3 3.9 1.8 18.5A2 2 0 0 0 3.5 21.5h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" fill="#F7CD4A"/><path d="M12 9v5" stroke="#1c1d22" stroke-width="2.4" stroke-linecap="round"/><circle cx="12" cy="17.4" r="1.4" fill="#1c1d22"/></svg></span> Expenses`
+        : `<span class="mark glow">✓</span> Expenses`;
+      $("openExpenses").title = pending ? `${pending} new expense${pending === 1 ? "" : "s"} waiting` : "Expenses up to date";
+      renderBell();
+      $("viewSheet").href = d.sheet_url;
+      const isCustom = d.range.key === "custom";
+      $("customLabel").textContent = isCustom ? d.range.label : "Custom";
+      $("customBtn").classList.toggle("on", isCustom);
+      $("rangeLabel").textContent = isCustom ? "Presets" : d.range.label;
+      const fmt = (s) => new Date(s + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+      $("rangeDates").textContent = d.range.start === d.range.end ? fmt(d.range.start) : fmt(d.range.start) + " – " + fmt(d.range.end);
+      $("rangeMenu").innerHTML = d.ranges.map((r) => `<button type="button" data-range="${r.key}" class="${r.key === d.range.key ? "on" : ""}">${esc(r.label)}</button>`).join("");
+      showBanner(d.warnings || []);
+
+      const minus = (n) => (n > 0 ? "-" : "") + usd(n);
+      const rows = [["Gross", usd(t.gross)], ["Fanvue", minus(t.fanvue_cut)], ["Chatter", minus(t.chatter_cut)], ["Opex", minus(t.opex)]];
+      if (d.settings.tax_enabled) rows.push(["Tax", minus(t.tax_cut)]);
+      rows.push([d.settings.tax_enabled ? "Net (after tax)" : "Net", usd(t.net)]);
+      $("water").innerHTML = rows.map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join("");
+
+      renderModerator(d);
+      renderChart(d.chart, d.range.kind);
+    }
+
+    // ---------- Custom date picker ----------
+    // Click two dates for a range. Click a selected date to keep only that one. With two picked,
+    // clicking another date moves whichever end is closer to it. Cancel / Apply.
+    const cal = { a: null, b: null, view: null };
+    const isoOf = (dt) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+    const dateOf = (iso) => new Date(iso + "T12:00:00");
+    const dayDiff = (x, y) => Math.round((dateOf(x) - dateOf(y)) / 86400000);
+    function openCal() {
+      const d = state.data; if (!d) return;
+      cal.a = d.range.start; cal.b = d.range.end !== d.range.start ? d.range.end : null;
+      const endMonth = dateOf(cal.b || cal.a);
+      cal.view = new Date(endMonth.getFullYear(), endMonth.getMonth() - 1, 1);   // left month; right = the end's month
+      // Desktop shows two months: never put an all-greyed month before the business start on the left.
+      const bs = dateOf(d.business_start || "2026-04-01");
+      if (!matchMedia("(max-width: 760px)").matches && cal.view < new Date(bs.getFullYear(), bs.getMonth(), 1)) cal.view = new Date(bs.getFullYear(), bs.getMonth(), 1);
+      $("rangeMenu").classList.add("hidden");
+      $("calPop").classList.remove("hidden");
+      renderCal();
+    }
+    function closeCal() { $("calPop").classList.add("hidden"); }
+    function pickDay(iso) {
+      if (!cal.a) { cal.a = iso; cal.b = null; }
+      else if (!cal.b) { if (iso !== cal.a) { [cal.a, cal.b] = iso < cal.a ? [iso, cal.a] : [cal.a, iso]; } }
+      else if (iso === cal.a) { cal.b = null; }
+      else if (iso === cal.b) { cal.a = cal.b; cal.b = null; }
+      else {
+        if (Math.abs(dayDiff(iso, cal.a)) < Math.abs(dayDiff(iso, cal.b))) cal.a = iso; else cal.b = iso;
+        if (cal.a > cal.b) [cal.a, cal.b] = [cal.b, cal.a];
+      }
+      renderCal();
+    }
+    function monthGrid(first) {
+      const today = state.data.today;
+      const lead = (first.getDay() + 6) % 7;                 // Monday-first
+      const days = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
+      const cells = [];
+      for (let i = 0; i < lead; i++) cells.push('<span class="cal-day out"></span>');
+      for (let n = 1; n <= days; n++) {
+        const iso = isoOf(new Date(first.getFullYear(), first.getMonth(), n));
+        const end = iso === cal.a || iso === cal.b, inside = cal.a && cal.b && iso > cal.a && iso < cal.b;
+        const off = iso > today || iso < (state.data.business_start || "2026-04-01");   // nothing before Fanvue earnings began
+        cells.push(`<button type="button" class="cal-day${end ? " end" : inside ? " in" : ""}${iso === today ? " today" : ""}" data-day="${iso}"${off ? " disabled" : ""}>${n}</button>`);
+      }
+      const title = first.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+      return { title, html: `<div class="cal-grid">${["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"].map((w) => `<span class="cal-dow">${w}</span>`).join("")}${cells.join("")}</div>` };
+    }
+    function renderCal() {
+      const left = new Date(cal.view.getFullYear(), cal.view.getMonth(), 1);
+      const right = new Date(cal.view.getFullYear(), cal.view.getMonth() + 1, 1);
+      const today = dateOf(state.data.today);
+      const atEnd = right.getFullYear() > today.getFullYear() || (right.getFullYear() === today.getFullYear() && right.getMonth() >= today.getMonth());
+      const prevSvg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M15 6l-6 6 6 6"/></svg>';
+      const nextSvg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M9 6l6 6-6 6"/></svg>';
+      const bs = dateOf(state.data.business_start || "2026-04-01");
+      const startMonth = new Date(bs.getFullYear(), bs.getMonth(), 1);
+      const leftAtStart = left <= startMonth, rightAtStart = right <= startMonth;   // can't page back past April 2026
+      const L = monthGrid(left), R = monthGrid(right);
+      const fmt = (iso) => dateOf(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+      const summary = !cal.a ? "Pick a start date" : !cal.b ? `${fmt(cal.a)} · pick an end date or apply` : `${fmt(cal.a)} – ${fmt(cal.b)} · ${dayDiff(cal.b, cal.a) + 1} days`;
+      $("calPop").innerHTML = `<div class="cal-months">
+          <div><div class="cal-head"><button type="button" class="cal-nav" data-cal-nav="-1" aria-label="Previous month"${leftAtStart ? " disabled" : ""}>${prevSvg}</button><b>${L.title}</b><span></span></div>${L.html}</div>
+          <div><div class="cal-head"><button type="button" class="cal-nav cal-nav-m" data-cal-nav="-1" aria-label="Previous month"${rightAtStart ? " disabled" : ""}>${prevSvg}</button><b>${R.title}</b><button type="button" class="cal-nav" data-cal-nav="1" aria-label="Next month"${atEnd ? " disabled" : ""}>${nextSvg}</button></div>${R.html}</div>
+        </div>
+        <div class="cal-foot"><span class="cal-sum">${summary}</span><button type="button" class="btn" data-cal="cancel">Cancel</button><button type="button" class="btn cal-apply" data-cal="apply"${cal.a ? "" : " disabled"}>Apply</button></div>`;
+    }
+
+    // ---------- Notification bell ----------
+    const CAUTION_SVG = '<svg class="caution" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.3 3.9 1.8 18.5A2 2 0 0 0 3.5 21.5h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" fill="#F7CD4A"/><path d="M12 9v5" stroke="#1c1d22" stroke-width="2.4" stroke-linecap="round"/><circle cx="12" cy="17.4" r="1.4" fill="#1c1d22"/></svg>';
+    // Dates/times on charge cards: "Oct 2 (Fri)" and "3:41 PM".
+    const dayName = (iso) => new Date(iso + "T12:00:00").toLocaleDateString("en-US", { weekday: "short" });
+    const monDay = (iso) => new Date(iso + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const dayLabel = (iso) => `${monDay(iso)} (${dayName(iso)})`;
+    const clock12 = (hm) => { const [h, m] = String(hm).split(":").map(Number); return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`; };
+    /** The time the charge hit the card: the bank's own time when it sends one, else when it first showed up here. */
+    function timeLabel(e, html = true) {
+      if (!e.time) return html ? '<small>Time not sent by the bank</small>' : "";
+      const t = clock12(e.time);
+      if (e.time_exact) return t;
+      if (e.seen_day && e.seen_day !== e.date) return html ? `${t} <small>· first seen ${monDay(e.seen_day)}</small>` : `${t} (seen ${monDay(e.seen_day)})`;
+      return html ? `${t} <small>· first seen</small>` : t;
+    }
+    const PEND = '<em class="pend" title="Pending: the bank hasn\'t posted it yet. It updates when it posts, and disappears if the bank drops it.">pending</em>';
+    function renderBell() {
+      const list = (state.data && state.data.notifications) || [];
+      $("bellBadge").textContent = list.length > 99 ? "99+" : String(list.length);
+      $("bellBadge").classList.toggle("hidden", !list.length);
+      const day = (s) => new Date(s + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      $("notifMenu").innerHTML = `<div class="notif-head"><span>Notifications</span>${list.length ? '<button type="button" data-notif-clear="all">Clear all</button>' : ""}</div>`
+        + (list.length ? `<div class="notif-list">${list.map((n) => `
+          <div class="notif ${n.kind === "new" && !n.done ? "new" : "auto"}">
+            <span class="ic">${n.kind === "new" && !n.done ? CAUTION_SVG : "✓"}</span>
+            <span class="txt"${n.kind === "new" && !n.done ? ' data-notif-open' : ""}><b>${esc(n.merchant)}${n.pending ? PEND : ""}</b><span${n.time !== undefined ? ' class="when"' : ""}>${n.time !== undefined && !n.done
+              ? `${dayLabel(n.date)}${n.time ? " · " + timeLabel(n, false) : ""}`
+              : `${n.done ? '<em class="ok-txt">Verified · added</em>' : n.kind === "new" ? "Needs approval" : "Logged to sheet"} · ${day(n.date)}`}</span></span>
+            <span class="amt">${n.deposit ? "+" : ""}${usd(n.amount)}</span>
+            <span class="nacts">${n.done ? "" : `${n.kind === "new" ? `<button class="vfy" type="button" data-notif-verify="${esc(n.id)}" aria-label="Verify this expense" title="Verify: add to sheet"${n.busy ? " disabled" : ""}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>` : ""}<button class="clr" type="button" data-notif-clear="${esc(n.id)}" aria-label="Clear notification" title="Clear notification (stays in Expenses › New)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 6l12 12M18 6L6 18"/></svg></button>`}</span>
+          </div>`).join("")}</div>` : '<div class="notif-empty">You\'re all caught up</div>');
+    }
+    async function clearNotif(id) {
+      if (!state.data) return;
+      const before = state.data.notifications || [];
+      state.data.notifications = id === "all" ? [] : before.filter((n) => n.id !== id);
+      renderBell();
+      try { await api(id === "all" ? "/api/notifications/clear" : `/api/notifications/${encodeURIComponent(id)}/clear`, {}); }
+      catch (err) { state.data.notifications = before; renderBell(); alertBanner(err); }
+    }
+
+    // ✓ in the bell = approve the charge (same as ✓ in Expenses › New). ✕ only hides the notification.
+    async function verifyNotif(id) {
+      const n = ((state.data && state.data.notifications) || []).find((x) => x.id === id);
+      if (!n || n.busy) return;
+      n.busy = true; renderBell();
+      try {
+        if (id.startsWith("chatter:")) await api(`/api/chatter/${encodeURIComponent(id.slice(8))}/approve`, { amount: Number(n.amount) || 0 });
+        else if (id.startsWith("fanvue:")) await api(`/api/fanvue-month/${encodeURIComponent(id.slice(7))}/approve`, { amount: Number(n.amount) || 0 });
+        else if (id.startsWith("coinbase:")) await api(`/api/coinbase-payout/${encodeURIComponent(id.slice(9))}/approve`, { amount: Number(n.amount) || 0 });
+        else if (id.startsWith("deposit:")) await api(`/api/deposit/${encodeURIComponent(id.slice(8))}/approve`, {});
+        else await api(`/api/bank/${encodeURIComponent(id)}/approve`, {});
+        n.busy = false; n.done = true; renderBell();
+        setTimeout(() => {
+          loadDashboard(false).catch(alertBanner);
+          if (!$("expBg").classList.contains("hidden")) api("/api/expenses").then((desk) => { state.desk = desk; renderDesk(); }).catch(() => {});
+        }, 1100);
+      } catch (err) { n.busy = false; renderBell(); alertBanner(err); }
+    }
+
+    function renderModerator(d) {
+      const s = d.settings, fv = d.fanvue, r = d.rates;
+      // The boxes show the rate you've set; a change only switches on when next week starts.
+      const pctTxt = (v) => `${+(v * 100).toFixed(2)}%`;
+      if (document.activeElement !== $("fanvueRate")) $("fanvueRate").value = +(r.fanvue_set * 100).toFixed(2);
+      if (document.activeElement !== $("chatterRate")) $("chatterRate").value = +(r.chatter_set * 100).toFixed(2);
+      const nextMon = (iso) => new Date(iso + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+      if (r.switch_on) {
+        const parts = [];
+        if (r.fanvue_now !== r.fanvue_set) parts.push(`Fanvue ${pctTxt(r.fanvue_now)} → ${pctTxt(r.fanvue_set)}`);
+        if (r.chatter_now !== r.chatter_set) parts.push(`Chatter ${pctTxt(r.chatter_now)} → ${pctTxt(r.chatter_set)}`);
+        $("rateHint").innerHTML = `<b>${parts.join(" · ")}</b> starts with next week (${nextMon(r.switch_on)}). This week and everything already logged keep the old rate.`;
+      } else {
+        $("rateHint").textContent = "A new % starts with next week's period. This week and everything already logged keep their rate.";
+      }
+      $("rateHint").classList.toggle("pending", !!r.switch_on);
+      $("taxSwitch").classList.toggle("on", s.tax_enabled);
+      $("taxSwitch").setAttribute("aria-checked", String(s.tax_enabled));
+      $("taxPct").value = s.tax_rate ? (s.tax_rate * 100).toFixed(2) + "%" : "";
+      $("modelSelect").innerHTML = `<option value="all">All models</option>` + d.models.map((m) => `<option value="${esc(m.id)}">${esc(m.name)}</option>`).join("");
+      $("modelSelect").value = state.model;
+      const ok = fv.connected && !fv.error;
+      const when = fv.last_sync ? new Date(fv.last_sync).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "";
+      $("syncPill").innerHTML = ok
+        ? `<span class="mark ok">✓</span> Fanvue data synced${when ? " · " + when : ""}`
+        : `<span class="mark no">✕</span> Fanvue not synced · tap to reconnect`;
+      $("syncPill").classList.toggle("bad", !ok);
+      $("syncPill").title = fv.error || "Fanvue connected";
+      $("syncPill").style.pointerEvents = ok ? "none" : "auto";
+      const b = d.bank;
+      if (!b.configured) $("bankBox").innerHTML = `<p class="hint" style="margin:0">Add the Plaid keys in Vercel to connect your card (see README).</p>`;
+      else if (b.needs_login) $("bankBox").innerHTML = `<button class="bank-btn" id="bankConnect" type="button"><span class="mark no">✕</span> ${esc(b.institution)} needs you to log in again</button>`;
+      else if (b.connected) {
+        const when = b.last_sync ? new Date(b.last_sync).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "";
+        $("bankBox").innerHTML = `<div class="bank-on"><span class="mark ${b.error ? "no" : "ok"}">${b.error ? "✕" : "✓"}</span>${esc(b.institution)} ${b.masks.map((m) => "••" + esc(m)).join(", ")}<small>${when ? "synced " + when : ""}</small></div>`;
+      } else $("bankBox").innerHTML = `<button class="bank-btn" id="bankConnect" type="button">Connect bank</button>`;
+    }
+
+    // ---------- Plaid ----------
+    function loadPlaid() {
+      if (window.Plaid) return Promise.resolve();
+      return new Promise((ok, fail) => {
+        const sc = document.createElement("script");
+        sc.src = "https://cdn.plaid.com/link/v2/stable/link-initialize.js";
+        sc.onload = ok; sc.onerror = () => fail(new Error("Couldn't load Plaid"));
+        document.head.appendChild(sc);
+      });
+    }
+    async function connectBank() {
+      const btn = $("bankConnect"); if (btn) { btn.disabled = true; btn.textContent = "Opening Plaid…"; }
+      try {
+        await loadPlaid();
+        const { link_token, mode } = await api("/api/bank/link-token", {});
+        Plaid.create({
+          token: link_token,
+          onSuccess: async (publicToken, meta) => {
+            showSync("Connecting bank");
+            try {
+              await api("/api/bank/connect", mode === "update" ? {} : { public_token: publicToken, institution: (meta.institution && meta.institution.name) || "" });
+              await loadDashboard(true);
+            } catch (err) { alertBanner(err); }
+            hideSync();
+          },
+          onExit: () => loadDashboard(false),
+        }).open();
+      } catch (err) { alertBanner(err); if (state.data) renderModerator(state.data); }
+    }
+
+    // ---------- Chart ----------
+    const GRID = "rgba(255,255,255,0.05)", TICK = "#6f6e78";
+    if (window.Chart) { Chart.defaults.font.family = "'Source Sans 3', ui-sans-serif, system-ui, sans-serif"; Chart.defaults.font.size = 12; }
+    function barGrad(c, top, bottom) {
+      const { chart, raw } = c, y = chart.scales.y;
+      if (!y || !chart.chartArea || !raw) return bottom;
+      const g = chart.ctx.createLinearGradient(0, y.getPixelForValue(0), 0, y.getPixelForValue(raw));
+      g.addColorStop(0, bottom); g.addColorStop(1, top); return g;
+    }
+    function hGrad(ctx, area, left, right) {
+      const g = ctx.createLinearGradient(area.left, 0, area.right, 0);
+      g.addColorStop(0, left); g.addColorStop(1, right); return g;
+    }
+    function fade(ctx, area, color) {
+      const g = ctx.createLinearGradient(0, area.top, 0, area.bottom);
+      g.addColorStop(0, color + "33"); g.addColorStop(1, color + "00"); return g;
+    }
+    const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+    // Thin crosshair on line charts + "Gross" / "Net" name tags at the end of each line.
+    const lineExtras = {
+      id: "lineExtras",
+      afterDatasetsDraw(chart) {
+        if (chart.config.type !== "line") return;
+        const { ctx, chartArea } = chart;
+        const active = chart.tooltip && chart.tooltip.getActiveElements();
+        if (active && active.length) {
+          const x = active[0].element.x;
+          ctx.save(); ctx.strokeStyle = "rgba(255,255,255,0.18)"; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(x, chartArea.top); ctx.lineTo(x, chartArea.bottom); ctx.stroke(); ctx.restore();
+        }
+        const ends = chart.data.datasets.map((ds, i) => {
+          const pts = chart.getDatasetMeta(i).data;
+          let j = ds.data.length - 1; while (j >= 0 && ds.data[j] == null) j--;
+          return j >= 0 ? { label: ds.label, x: pts[j].x, y: pts[j].y } : null;
+        }).filter(Boolean);
+        if (ends.length === 2 && Math.abs(ends[0].y - ends[1].y) < 14) { const mid = (ends[0].y + ends[1].y) / 2; ends[0].y = mid - 7; ends[1].y = mid + 7; }
+        ctx.save(); ctx.font = "600 12px 'Source Sans 3', sans-serif"; ctx.fillStyle = "#b9b8c2"; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+        ends.forEach((e) => ctx.fillText(e.label, e.x + 8, e.y));
+        ctx.restore();
+      },
+    };
+
+    function renderChart(points, kind) {
+      if (!window.Chart) return;
+      const labels = points.map((p) => p.label);
+      const gross = points.map((p) => p.gross), net = points.map((p) => p.net);
+      $("chartEmpty").classList.toggle("hidden", gross.some((v) => v));
+      const isBar = kind !== "line";
+      const gT = css("--gross-top"), gB = css("--gross-bot"), nT = css("--net-top"), nB = css("--net-bot"), surface = css("--card");
+      const mobile = matchMedia("(max-width: 760px)").matches;
+      const dense = mobile && kind === "hourly";  // 48 bars on a phone: drop the separator gap so they stay visible
+      const ds = (label, data, top, bottom) => isBar ? {
+        label, data,
+        backgroundColor: (c) => barGrad(c, top, bottom),
+        borderColor: surface, borderWidth: dense ? 0 : { left: 1, right: 1, top: 0, bottom: 0 }, borderSkipped: "start",
+        borderRadius: dense ? 2 : 4, maxBarThickness: mobile ? 8 : 12, barPercentage: 0.9, categoryPercentage: kind === "hourly" ? (dense ? 0.9 : 0.7) : 0.5,
+      } : {
+        label, data, borderWidth: 2, cubicInterpolationMode: "monotone", spanGaps: false,
+        borderColor: (c) => c.chart.chartArea ? hGrad(c.chart.ctx, c.chart.chartArea, bottom, top) : bottom,
+        backgroundColor: (c) => c.chart.chartArea ? fade(c.chart.ctx, c.chart.chartArea, bottom) : "transparent",
+        fill: label === "Net" ? "origin" : false, pointRadius: 0, pointHoverRadius: 5, pointHoverBorderWidth: 2,
+        pointHoverBackgroundColor: top, pointHoverBorderColor: surface,
+      };
+      if (state.chart) state.chart.destroy();
+      state.chart = new Chart($("chart"), {
+        type: isBar ? "bar" : "line",
+        data: { labels, datasets: [ds("Gross", gross, gT, gB), ds("Net", net, nT, nB)] },
+        plugins: [lineExtras],
+        options: {
+          responsive: true, maintainAspectRatio: false, animation: state.holdAnim ? false : { duration: 350 },
+          layout: { padding: { top: 6, right: isBar ? 0 : 44 } },
+          interaction: { mode: "index", intersect: false },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: "#26272d", borderColor: "rgba(255,255,255,0.12)", borderWidth: 1, padding: 12,
+              titleColor: "#ecebf0", bodyColor: "#c9c8d2", displayColors: false, titleFont: { weight: "600" },
+              filter: (item) => item.raw != null,
+              callbacks: {
+                title: (items) => items[0].label + (kind === "hourly" ? " PT" : ""),
+                label: (item) => item.dataset.label + "  " + usd(item.raw),
+              },
+            },
+          },
+          scales: {
+            x: { grid: { display: false }, border: { display: false },
+                 ticks: { color: TICK, maxRotation: 0, autoSkip: true, maxTicksLimit: kind === "hourly" ? (mobile ? 6 : 12) : (isBar ? 7 : (mobile ? 4 : 8)),
+                          callback(v) { const l = this.getLabelForValue(v); return kind === "line" ? l.replace(/, \d{4}$/, "") : l; } } },
+            y: { beginAtZero: true, grid: { color: GRID }, border: { display: false },
+                 ticks: { color: TICK, maxTicksLimit: 6, callback: (v) => "$" + Number(v).toLocaleString("en-US") } },
+          },
+        },
+      });
+    }
+
+    // ---------- Moderator ----------
+    let saveTimer;
+    function saveSettings() {
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(async () => {
+        const fanvue = Number($("fanvueRate").value), chatter = Number($("chatterRate").value);
+        if (!(fanvue >= 0 && fanvue <= 90 && chatter >= 0 && chatter <= 90)) return;
+        await api("/api/settings", { fanvue_rate: fanvue / 100, chatter_rate: chatter / 100, tax_enabled: $("taxSwitch").classList.contains("on") });
+        await loadDashboard(false);
+      }, 450);
+    }
+
+    // ---------- Expenses ----------
+    async function openExpenses() {
+      $("expBg").classList.remove("hidden");
+      $("deskBody").innerHTML = '<p class="empty">Loading…</p>';
+      try {
+        state.desk = await api("/api/expenses");
+        $("viewSheet").href = state.desk.sheet_url;
+        if (state.tab === "pending" && !state.desk.pending.length && !(state.desk.deposits || []).length && !(state.desk.chatter_drafts || []).length && !(state.desk.fanvue_drafts || []).length && !(state.desk.coinbase_drafts || []).length) state.tab = "verified";
+        renderDesk();
+      } catch (err) {
+        $("deskBody").innerHTML = `<p class="empty">${esc(err.message)}</p>`;
+      }
+    }
+    function renderDesk() {
+      const d = state.desk;
+      document.querySelectorAll("[data-tab]").forEach((b) => b.classList.toggle("on", b.dataset.tab === state.tab));
+      const waitingCount = d.pending.length + (d.deposits || []).length + (d.chatter_drafts || []).length + (d.fanvue_drafts || []).length + (d.coinbase_drafts || []).length;
+      document.querySelector('[data-tab="pending"]').textContent = waitingCount ? `New (${waitingCount})` : "New";
+      const x = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+      const CHEV = '<svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M9 6l6 6-6 6"/></svg>';
+      const check = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12.5l4.5 4.5L19 7"/></svg>';
+      let html = "";
+      if (state.tab === "pending") {
+        // Month-end Fanvue expense + weekly chatting invoice: amount is editable before it goes to the sheet.
+        html = (d.fanvue_drafts || []).map((f) => `<div class="row draft"><div class="grow-min"><b>Fanvue · ${esc(f.label)}</b>
+            <div class="sub">Month closed · calculated ${usd(f.amount)} · goes to the Fixed table</div></div>
+          <div class="acts"><label class="amt-edit"><span>$</span><input class="input" type="number" inputmode="decimal" min="0" step="0.01" value="${Number(f.amount).toFixed(2)}" data-draft-amount="${esc(f.id)}" aria-label="Fanvue amount" /></label>
+            <button class="icon ok" data-act="fanvue-approve" data-id="${esc(f.id)}" aria-label="Log this month's Fanvue expense">${check}</button><button class="icon no" data-act="fanvue-skip" data-id="${esc(f.id)}" aria-label="Skip">${x}</button></div></div>`).join("");
+        html += (d.chatter_drafts || []).map((c) => `<div class="row draft"><div class="grow-min"><b>Chatting agency · ${esc(c.label)}</b>
+            <div class="sub">${c.missed ? `Never logged in the sheet · ${c.known ? "invoice amount on record" : "calculated"} ${usd(c.amount)} · check it, then ✓` : `Week closed Sun 11:59 PM Serbia · calculated ${usd(c.amount)}`}</div></div>
+          <div class="acts"><label class="amt-edit"><span>$</span><input class="input" type="number" inputmode="decimal" min="0" step="0.01" value="${Number(c.amount).toFixed(2)}" data-draft-amount="${esc(c.id)}" aria-label="Invoice amount" /></label>
+            <button class="icon ok" data-act="chatter-approve" data-id="${esc(c.id)}" aria-label="Add this invoice to the sheet">${check}</button><button class="icon no" data-act="chatter-skip" data-id="${esc(c.id)}" aria-label="Skip this invoice">${x}</button></div></div>`).join("");
+        html += (d.coinbase_drafts || []).map((c) => `<div class="row draft"><div class="grow-min"><b>Fanvue payout to Coinbase · ${esc(c.label)}</b>
+            <div class="sub">What you paid out to Coinbase for the agency this week · goes to the Income tab's Fanvue Payouts</div></div>
+          <div class="acts"><label class="amt-edit"><span>$</span><input class="input" type="number" inputmode="decimal" min="0" step="0.01" value="${Number(c.amount).toFixed(2)}" data-draft-amount="cb-${esc(c.id)}" aria-label="Payout amount" /></label>
+            <button class="icon ok" data-act="coinbase-approve" data-id="${esc(c.id)}" aria-label="Log this payout">${check}</button><button class="icon no" data-act="coinbase-skip" data-id="${esc(c.id)}" aria-label="Skip">${x}</button></div></div>`).join("");
+        // Card charges + payouts landing in Chase: nothing is logged until you ✓ (✕ = Trash).
+        const chargeCard = (e, kind) => `<div class="row charge${kind === "deposit" ? " payout" : ""}">
+          <div class="ch-main">
+            <div class="ch-title"><b>${esc(e.item)}</b>${e.pending ? PEND : ""}</div>
+            <div class="ch-date">${monDay(e.date)} <span>(${dayName(e.date)})</span></div>
+            <div class="ch-time">${timeLabel(e)}</div>
+            ${e.why ? `<div class="ch-why">${esc(e.why)}</div>` : ""}
+          </div>
+          <div class="ch-side">
+            <b class="ch-amt">${kind === "deposit" ? "+" : ""}${usd(e.amount)}</b>
+            <div class="acts"><button class="icon ok" data-act="${kind}-approve" data-id="${esc(e.id)}" aria-label="${kind === "deposit" ? "Log this payout on the Income tab" : "Business expense: add to sheet"}">${check}</button><button class="icon no" data-act="${kind}-skip" data-id="${esc(e.id)}" aria-label="${kind === "deposit" ? "Not a Fanvue payout" : "Not a business expense: trash"}">${x}</button></div>
+          </div></div>`;
+        html += (d.deposits || []).map((e) => chargeCard({ ...e, item: "Fanvue payout landed in Chase", why: "Goes to the Income tab (Fanvue Payouts) when you ✓" }, "deposit")).join("");
+        html += d.pending.map((e) => chargeCard(e, "bank")).join("");
+        html = html || `<p class="empty">${d.bank.connected ? "No new charges." : "Connect your bank in Moderator to see new card charges here."}</p>`;
+      } else if (state.tab === "trash") {
+        html = d.trash.map((e) => `<div class="row"><div><b>${esc(e.item || e.provider)}</b><div class="sub">${e.date} · ${usd(e.amount)}${e.kind === "bank" ? " · card" : e.kind === "deposit" ? " · payout" : ""}</div></div>
+          <div class="acts"><button class="btn" data-act="${e.kind === "bank" ? "bank-approve" : e.kind === "deposit" ? "deposit-approve" : "verified"}" data-id="${esc(e.id)}">Recover</button></div></div>`).join("");
+        html = html || '<p class="empty">Trash is empty.</p>';
+      } else {
+        const thisYear = String(new Date().getFullYear());
+        const short = (iso) => new Date(iso + "T12:00:00").toLocaleDateString("en-US", iso.startsWith(thisYear) ? { month: "short", day: "numeric" } : { month: "short", year: "2-digit" });
+        const providerGroup = (g, max) => {
+          const items = g.items.map((e) => itemRow(e)).join("");
+          return `<div class="vgroup ${state.open.has(g.provider) ? "open" : ""}">
+            <button class="vhead" type="button" data-prov="${esc(g.provider)}">
+              <div><b>${esc(g.provider)}</b><div class="sub">${g.count} charge${g.count === 1 ? "" : "s"} · last ${short(g.last)}</div></div>
+              <span class="tot">${usd(g.total)}</span>${CHEV}
+              <i class="vbar"><i style="width:${Math.max(2, (g.total / max) * 100).toFixed(1)}%"></i></i>
+            </button>
+            <div class="vitems">${items}<button class="linkbtn" data-act="trash-provider" data-provider="${esc(g.provider)}">Trash every ${esc(g.provider)} charge (all months)</button></div>
+          </div>`;
+        };
+        const itemRow = (e) => `<div class="vitem"><span class="d">${short(e.date)}</span>
+            <span class="n" title="${esc(e.item)}${e.pending ? " (pending: not posted by the bank yet)" : ""}">${esc(e.item)}${e.pending ? PEND : ""}${e.qty > 1 ? `<small>${e.qty} × ${usd(e.amount / e.qty)}</small>` : ""}</span>
+            <b>${usd(e.amount)}</b><button class="icon no" data-act="trash" data-id="${esc(e.id)}" aria-label="Trash this charge">${x}</button></div>`;
+        // One collapsed rectangle per category; the title + total stays above it.
+        const category = (key, title, total, summary, body) => `<div class="vsec"><span>${title}</span><b>${usd(total)}</b></div>
+          <div class="vgroup vcat ${state.open.has(key) ? "open" : ""}">
+            <button class="vhead" type="button" data-prov="${key}"><div><b>${summary}</b></div><span></span>${CHEV}</button>
+            <div class="vitems">${body}</div>
+          </div>`;
+        // One period picker for all three categories (default: this month). Everything starts at the
+        // business start (April 2026, when Fanvue earnings began).
+        const startIso = d.business_start || "2026-04-01";
+        // Picker: pick a year (‹ 2026 ›), then a month. Years run from the start year to the current
+        // year, so a new year shows up on its own when the calendar rolls over (d.month is the
+        // server's PT month). Months before April 2026 or after this month are greyed out.
+        const curYear = Number(d.month.slice(0, 4));
+        const startYear = Number(startIso.slice(0, 4)), startMonth = startIso.slice(0, 7);
+        const pad = (n) => String(n).padStart(2, "0");
+        if (!state.opexMonth || (state.opexMonth !== "all" && (state.opexMonth > d.month || state.opexMonth < startMonth))) state.opexMonth = d.month;
+        if (!state.opexYear || state.opexYear > curYear || state.opexYear < startYear) state.opexYear = state.opexMonth === "all" ? curYear : Number(state.opexMonth.slice(0, 4));
+        const period = state.opexMonth;
+        const inPeriod = (iso) => iso >= startIso && (period === "all" || iso.startsWith(period));
+        const monthName = (m) => m === "all" ? "All time" : new Date(m + "-01T12:00:00").toLocaleDateString("en-US", { month: "long", year: "numeric" });
+        const periodGross = period === "all" ? Object.values(d.gross_months || {}).reduce((a, b) => a + b, 0) : (d.gross_months || {})[period] || 0;
+        const ofGross = (v) => periodGross > 0 ? `${((v / periodGross) * 100).toFixed(1)}% of gross` : "no gross yet";
+        const emptyNote = period === "all" ? "Nothing yet." : `Nothing in ${monthName(period)}.`;
+
+        // OPEX: grouped by merchant
+        const grouped = {};
+        d.verified.filter((g) => !g.chatter).flatMap((g) => g.items.map((e) => ({ ...e, provider: g.provider }))).filter((e) => inPeriod(e.date)).forEach((e) => {
+          const g = grouped[e.provider] || (grouped[e.provider] = { provider: e.provider, total: 0, count: 0, last: e.date, items: [] });
+          g.total += e.amount; g.count += e.qty || 1; g.last = e.date > g.last ? e.date : g.last; g.items.push(e);
+        });
+        const biz = Object.values(grouped).sort((a, b) => b.total - a.total || a.provider.localeCompare(b.provider));
+        const bizTotal = biz.reduce((sum, g) => sum + g.total, 0);
+        // Fanvue: one figure per month. Logged in the sheet → that amount; waiting in New → the
+        // draft; otherwise the live calculation (the current month keeps climbing until it closes).
+        const fvMonths = ((d.fanvue || {}).months || []).filter((m) => m.month >= startMonth && (period === "all" || m.month === period))
+          .map((m) => ({ ...m, value: m.logged != null ? m.logged : m.draft != null ? m.draft : m.amount,
+                         state: m.logged != null ? "logged" : m.draft != null ? "await" : m.live ? "live" : "calc" }));
+        const fvTotal = fvMonths.reduce((sum, m) => sum + m.value, 0);
+        // Chatting: this week's live invoice + closed weeks waiting for you + everything logged.
+        // A week belongs to the month of its Sunday (the date it's logged under).
+        const chat = d.verified.filter((g) => g.chatter).flatMap((g) => g.items).filter((e) => inPeriod(e.date)).sort((a, b) => b.date.localeCompare(a.date));
+        const live = d.chatter_live && inPeriod(d.chatter_live.week_end) ? d.chatter_live : null;
+        const waitingWeeks = (d.chatter_drafts || []).filter((c) => inPeriod(c.week_end));
+        const chatTotal = chat.reduce((sum, e) => sum + e.amount, 0) + waitingWeeks.reduce((sum, c) => sum + c.amount, 0) + (live ? live.amount : 0);
+        const TAGS = { live: '<small class="tag live">live</small>', await: '<small class="tag await">needs confirming</small>', logged: '<small class="tag logged">logged</small>', calc: '<small class="tag logged">not logged</small>' };
+        const closesAt = (iso) => new Date(iso).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit", timeZone: "America/Los_Angeles" });
+        const chatRows = (live ? `<div class="vitem"><span class="d">${short(live.week_end)}</span><span class="n" title="Closes ${closesAt(live.closes)} PT">This week · ${esc(live.label)}${TAGS.live}<small>closes ${closesAt(live.closes)} PT</small></span><b>${usd(live.amount)}</b><span></span></div>` : "")
+          + waitingWeeks.map((c) => `<div class="vitem"><span class="d">${short(c.week_end)}</span><span class="n">Chatting agency · ${esc(c.label)}${TAGS.await}</span><b>${usd(c.amount)}</b><span></span></div>`).join("")
+          + chat.map(itemRow).join("");
+        const chatCount = chat.length + waitingWeeks.length + (live ? 1 : 0);
+        // The header compares OPEX only (Fanvue and Chatting are fixed costs, so they'd blur month-to-month).
+        const opexPct = periodGross > 0 ? `${((bizTotal / periodGross) * 100).toFixed(1)}%` : "—";
+
+        const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const yr = state.opexYear;
+        const panel = state.opexPickerOpen ? `<div class="mp">
+            <div class="mp-head">
+              <button type="button" class="cal-nav" data-mp-year="-1" aria-label="Previous year"${yr <= startYear ? " disabled" : ""}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M15 6l-6 6 6 6"/></svg></button>
+              <b>${yr}</b>
+              <button type="button" class="cal-nav" data-mp-year="1" aria-label="Next year"${yr >= curYear ? " disabled" : ""}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M9 6l6 6-6 6"/></svg></button>
+            </div>
+            <div class="mp-grid">${MONTHS.map((label, i) => {
+              const m = `${yr}-${pad(i + 1)}`, off = m > d.month || m < startMonth;
+              return `<button type="button" class="mp-m${m === period ? " on" : ""}" data-mp-month="${m}"${off ? " disabled" : ""}>${label}</button>`;
+            }).join("")}</div>
+            <button type="button" class="mp-all${period === "all" ? " on" : ""}" data-mp-month="all">All time · since ${monthName(startMonth)}</button>
+          </div>` : "";
+        html += `<div class="opex-month"><button type="button" class="btn opex-pick${state.opexPickerOpen ? " open" : ""}" data-mp-toggle aria-expanded="${!!state.opexPickerOpen}">${monthName(period)}${CHEV}</button>
+          <span class="opex-pct"><b>OPEX ${opexPct} of gross</b><small>${usd(bizTotal)} of ${usd(periodGross)}</small></span></div>${panel}`;
+
+        html += category("cat:biz", "OPEX", bizTotal,
+          `${ofGross(bizTotal)} · ${biz.length} merchant${biz.length === 1 ? "" : "s"}`,
+          biz.map((g) => providerGroup(g, biz[0].total || 1)).join("") || `<p class="empty">${emptyNote}</p>`);
+        const fvState = { live: "Live · so far this month", await: "Month closed · needs confirming", logged: "Logged to sheet", calc: "Calculated · not logged" };
+        html += category("cat:fanvue", "Fanvue", fvTotal,
+          period === "all" ? `${fvMonths.length} month${fvMonths.length === 1 ? "" : "s"} · ${ofGross(fvTotal)}`
+            : `${fvMonths[0] ? fvState[fvMonths[0].state] : "Nothing yet"} · ${ofGross(fvTotal)}`,
+          fvMonths.map((m) => `<div class="vitem month"><span class="n">${esc(m.label)}${TAGS[m.state]}</span><b>${usd(m.value)}</b></div>`).join("") || `<p class="empty">${emptyNote}</p>`);
+        html += category("cat:chat", "Chatting", chatTotal,
+          live ? `Live · this week ${usd(live.amount)}${waitingWeeks.length ? ` · ${waitingWeeks.length} to confirm` : ""}`
+            : chatCount ? `${chatCount} week${chatCount === 1 ? "" : "s"} & payments${waitingWeeks.length ? ` · ${waitingWeeks.length} to confirm` : ""}` : "No payments",
+          chatRows || `<p class="empty">${emptyNote}</p>`);
+        html = html || '<p class="empty">Nothing here.</p>';
+      }
+      $("deskBody").innerHTML = html;
+    }
+    async function deskAction(btn) {
+      const act = btn.dataset.act;
+      btn.disabled = true;
+      try {
+        if (act === "verified" || act === "trash") await api(`/api/expenses/${btn.dataset.id}/status`, { status: act });
+        if (act === "bank-approve" || act === "bank-skip") await api(`/api/bank/${encodeURIComponent(btn.dataset.id)}/${act.slice(5)}`, {});
+        if (act === "deposit-approve" || act === "deposit-skip") await api(`/api/deposit/${encodeURIComponent(btn.dataset.id)}/${act.slice(8)}`, {});
+        if (act === "trash-provider") await api("/api/providers/trash", { provider: btn.dataset.provider });
+        if (act === "chatter-skip") await api(`/api/chatter/${encodeURIComponent(btn.dataset.id)}/skip`, {});
+        if (act === "fanvue-skip") await api(`/api/fanvue-month/${encodeURIComponent(btn.dataset.id)}/skip`, {});
+        if (act === "coinbase-skip") await api(`/api/coinbase-payout/${encodeURIComponent(btn.dataset.id)}/skip`, {});
+        if (act === "coinbase-approve") {
+          const input = document.querySelector(`[data-draft-amount="cb-${CSS.escape(btn.dataset.id)}"]`);
+          const amount = Number(input && input.value);
+          if (!Number.isFinite(amount) || amount < 0) throw new Error("Enter the amount first.");
+          await api(`/api/coinbase-payout/${encodeURIComponent(btn.dataset.id)}/approve`, { amount });
+        }
+        if (act === "chatter-approve" || act === "fanvue-approve") {
+          const input = document.querySelector(`[data-draft-amount="${CSS.escape(btn.dataset.id)}"]`);
+          const amount = Number(input && input.value);
+          if (!Number.isFinite(amount) || amount < 0) throw new Error("Enter the amount first.");
+          await api(`/api/${act === "chatter-approve" ? "chatter" : "fanvue-month"}/${encodeURIComponent(btn.dataset.id)}/approve`, { amount });
+        }
+        state.desk = await api("/api/expenses");
+        renderDesk();
+        loadDashboard(false);
+      } catch (err) { btn.disabled = false; alertBanner(err); }
+    }
+    function alertBanner(err) { if (err instanceof AuthError) location.reload(); else showBanner([err.message]); }
+
+    // ---------- Events ----------
+    $("loginForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      $("loginErr").textContent = "";
+      try { await api("/api/login", { password: $("pw").value }); $("pw").value = ""; boot(); }
+      catch (err) { $("loginErr").textContent = err instanceof AuthError ? "Wrong password." : err.message; }
+    });
+    document.addEventListener("click", async (e) => {
+      const t = e.target;
+      // OPEX month picker (year ‹ › then month)
+      if (t.closest("[data-mp-toggle]")) { state.opexPickerOpen = !state.opexPickerOpen; renderDesk(); return; }
+      const mpYear = t.closest("[data-mp-year]");
+      if (mpYear) { state.opexYear += Number(mpYear.dataset.mpYear); renderDesk(); return; }
+      const mpMonth = t.closest("[data-mp-month]");
+      if (mpMonth) {
+        state.opexMonth = mpMonth.dataset.mpMonth; state.opexPickerOpen = false;
+        if (state.opexMonth !== "all") state.opexYear = Number(state.opexMonth.slice(0, 4));
+        renderDesk(); return;
+      }
+      if (state.opexPickerOpen && !t.closest(".mp")) { state.opexPickerOpen = false; renderDesk(); }
+      const menu = $("rangeMenu");
+      if (t.closest("#rangeBtn")) { closeCal(); menu.classList.toggle("hidden"); return; }
+      if (t.closest("#customBtn")) { $("calPop").classList.contains("hidden") ? openCal() : closeCal(); return; }
+      const dayBtn = t.closest("[data-day]");
+      if (dayBtn) { pickDay(dayBtn.dataset.day); return; }
+      const nav = t.closest("[data-cal-nav]");
+      if (nav) { cal.view = new Date(cal.view.getFullYear(), cal.view.getMonth() + Number(nav.dataset.calNav), 1); renderCal(); return; }
+      const calAct = t.closest("[data-cal]");
+      if (calAct) {
+        if (calAct.dataset.cal === "apply" && cal.a) {
+          state.range = "custom"; state.custom = { start: cal.a, end: cal.b || cal.a };
+          loadDashboard(false).catch(alertBanner);
+        }
+        closeCal(); return;
+      }
+      if (!t.closest("#calPop")) closeCal();
+      if (!t.closest(".range")) menu.classList.add("hidden");
+      const r = t.closest("[data-range]");
+      if (r) { state.range = r.dataset.range; menu.classList.add("hidden"); loadDashboard(false).catch(alertBanner); return; }
+      const bellMenu = $("notifMenu");
+      if (t.closest("#bellBtn")) { const open = bellMenu.classList.toggle("hidden") === false; $("bellBtn").setAttribute("aria-expanded", String(open)); return; }
+      const vfy = t.closest("[data-notif-verify]");
+      if (vfy) { verifyNotif(vfy.dataset.notifVerify); return; }
+      const clr = t.closest("[data-notif-clear]");
+      if (clr) { clearNotif(clr.dataset.notifClear); return; }
+      if (t.closest("[data-notif-open]")) { bellMenu.classList.add("hidden"); openExpenses(); return; }
+      if (!t.closest(".bell-wrap")) { bellMenu.classList.add("hidden"); $("bellBtn").setAttribute("aria-expanded", "false"); }
+      if (t.closest("#openMod") || t.closest("[data-open-mod]")) { $("modBg").classList.remove("hidden"); return; }
+      if (t.closest("#openExpenses") || t.closest("#tileOpex")) { $("modBg").classList.add("hidden"); openExpenses(); return; }
+      if (t.closest("[data-close]") || t.classList.contains("overlay") && t.id !== "gate") { t.closest(".overlay").classList.add("hidden"); return; }
+      const prov = t.closest("[data-prov]");
+      if (prov) {
+        const name = prov.dataset.prov; state.open.has(name) ? state.open.delete(name) : state.open.add(name);
+        if (prov.isConnected) prov.parentElement.classList.toggle("open"); else renderDesk();   // the desk was just re-rendered (picker closed)
+        return;
+      }
+      const tab = t.closest("[data-tab]");
+      if (tab) { state.tab = tab.dataset.tab; renderDesk(); return; }
+      const act = t.closest("[data-act]");
+      if (act) { deskAction(act); return; }
+      if (t.closest("#bankConnect")) { connectBank(); return; }
+      if (t.closest("#taxSwitch")) { $("taxSwitch").classList.toggle("on"); saveSettings(); return; }
+      if (t.closest("#taxCalc")) {
+        const b = $("taxCalc"); b.disabled = true; b.textContent = "…";
+        try {
+          const out = await api("/api/tax/estimate", {});
+          $("taxHint").textContent = `${(out.rate * 100).toFixed(2)}% of ${usd(out.profit_ytd)} profit this year ≈ ${usd(out.total)} (self-employment ${usd(out.self_employment)}, federal ${usd(out.federal)}, CA ${usd(out.california)}).`;
+          await loadDashboard(false);
+        } catch (err) { alertBanner(err); }
+        b.disabled = false; b.textContent = "Calculate";
+      }
+    });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") document.querySelectorAll(".overlay:not(#gate)").forEach((o) => o.classList.add("hidden")); });
+    $("fanvueRate").addEventListener("input", saveSettings);
+    $("chatterRate").addEventListener("input", saveSettings);
+    $("modelSelect").addEventListener("change", (e) => { state.model = e.target.value; });
+
+    boot();
+
+    // ---------- Live card charges ----------
+    // While the page is open: re-check the bank every 3 minutes, and as soon as you come back to the tab.
+    // (Plaid also pings the server when it has new charges, so they're usually there before you look.)
+    let lastBankCheck = Date.now();
+    async function liveBankCheck() {
+      if (document.hidden || !state.data || Date.now() - lastBankCheck < 60_000) return;
+      lastBankCheck = Date.now();
+      try {
+        const r = await api("/api/bank/sync", {});
+        if (!r || !r.changed) return;
+        await loadDashboard(false);
+        if (!$("expBg").classList.contains("hidden")) { state.desk = await api("/api/expenses"); renderDesk(); }
+      } catch {}
+    }
+    setInterval(liveBankCheck, 180_000);
+    document.addEventListener("visibilitychange", liveBankCheck);
+  </script>
+</body>
+</html>
