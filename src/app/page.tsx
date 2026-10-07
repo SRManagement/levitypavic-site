@@ -367,12 +367,34 @@ function IntroSequence({
 
 function PrimaryButton({ onClick }: { onClick: () => void }) {
   return (
-    <button
-      onClick={onClick}
-      className="font-display ease-premium w-full max-w-xs rounded-full bg-red px-10 py-5 text-center text-sm font-bold uppercase tracking-[0.25em] text-cream transition-colors active:bg-cream active:text-red"
-    >
-      Exclusive Content
-    </button>
+    <div className="flex flex-col items-center">
+      <motion.button
+        onClick={onClick}
+        animate={{
+          scale: [1, 1.035, 1],
+          boxShadow: [
+            "0 0 0px 0px rgba(255,8,0,0.0), 0 4px 18px rgba(255,8,0,0.25)",
+            "0 0 28px 6px rgba(255,8,0,0.55), 0 4px 18px rgba(255,8,0,0.25)",
+            "0 0 0px 0px rgba(255,8,0,0.0), 0 4px 18px rgba(255,8,0,0.25)",
+          ],
+        }}
+        transition={{
+          duration: 2.6,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+        className="font-display w-full max-w-xs rounded-full px-10 py-5 text-center text-sm font-bold uppercase tracking-[0.25em] text-cream active:scale-95"
+        style={{
+          background: "linear-gradient(180deg, #ff2e20 0%, var(--red) 55%, #c40600 100%)",
+        }}
+      >
+        Exclusive Content
+      </motion.button>
+
+      <p className="font-mono mt-3 text-[10px] uppercase tracking-[0.3em] text-muted">
+        18+ · for adults only
+      </p>
+    </div>
   );
 }
 
