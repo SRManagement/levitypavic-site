@@ -10,6 +10,18 @@ export function isInAppBrowser(): boolean {
   return /Instagram|FBAN|FBAV|TikTok|Snapchat|Line\//i.test(ua);
 }
 
+// Meta's own crawlers (link previews, link safety checks, review bots).
+// These always get the real page — never the bot check or the country
+// block — so Meta sees exactly what visitors see. Used by both the page
+// (browser side) and src/proxy.ts (server side).
+export const META_CRAWLER_RE =
+  /facebookexternalhit|facebookcatalog|Facebot|meta-externalagent|meta-externalfetcher|meta-webindexer/i;
+
+export function isMetaCrawler(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return META_CRAWLER_RE.test(navigator.userAgent || "");
+}
+
 function isAndroid(): boolean {
   return typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent);
 }

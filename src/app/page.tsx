@@ -5,7 +5,7 @@ import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "
 import AgeGate from "@/components/AgeGate";
 import ImageSlot from "@/components/ImageSlot";
 import HumanCheck from "@/components/HumanCheck";
-import { openExternal, isInAppBrowser } from "@/lib/browser";
+import { openExternal, isInAppBrowser, isMetaCrawler } from "@/lib/browser";
 
 // Cloudflare Turnstile public key, set in Vercel as
 // NEXT_PUBLIC_TURNSTILE_SITE_KEY. While it's empty the bot check is simply
@@ -60,6 +60,13 @@ export default function Home() {
     const inAppNow = isInAppBrowser();
     setInApp(inAppNow);
     setCheckedInApp(true);
+    // Meta's crawlers skip the bot check and see the real page, exactly
+    // like a visitor would — so nothing here can look like cloaking. They
+    // aren't counted as views either.
+    if (isMetaCrawler()) {
+      setHuman(true);
+      return;
+    }
     // Instagram/in-app visitors are counted right away, same as before.
     // Everyone else is counted once they pass the bot check, so automated
     // traffic stays out of your stats. With no Turnstile key set, everyone
@@ -388,34 +395,28 @@ function IntroSequence({
 
 function PrimaryButton({ onClick }: { onClick: () => void }) {
   return (
-    <div className="flex flex-col items-center">
-      <motion.button
-        onClick={onClick}
-        animate={{
-          scale: [1, 1.028, 1],
-          boxShadow: [
-            "0 0 0px 0px rgba(255,8,0,0.0), 0 4px 14px rgba(255,8,0,0.2)",
-            "0 0 22px 5px rgba(255,8,0,0.44), 0 4px 14px rgba(255,8,0,0.2)",
-            "0 0 0px 0px rgba(255,8,0,0.0), 0 4px 14px rgba(255,8,0,0.2)",
-          ],
-        }}
-        transition={{
-          duration: 3.25,
-          repeat: Infinity,
-          ease: "easeInOut",
-        }}
-        className="font-display w-full max-w-xs rounded-full px-10 py-5 text-center text-sm font-bold uppercase tracking-[0.25em] text-cream active:scale-95"
-        style={{
-          background: "linear-gradient(180deg, #ff2e20 0%, var(--red) 55%, #c40600 100%)",
-        }}
-      >
-        Exclusive Content
-      </motion.button>
-
-      <p className="font-mono mt-3 text-[10px] uppercase tracking-[0.3em] text-muted">
-        18+ · for adults only
-      </p>
-    </div>
+    <motion.button
+      onClick={onClick}
+      animate={{
+        scale: [1, 1.028, 1],
+        boxShadow: [
+          "0 0 0px 0px rgba(255,8,0,0.0), 0 4px 14px rgba(255,8,0,0.2)",
+          "0 0 22px 5px rgba(255,8,0,0.44), 0 4px 14px rgba(255,8,0,0.2)",
+          "0 0 0px 0px rgba(255,8,0,0.0), 0 4px 14px rgba(255,8,0,0.2)",
+        ],
+      }}
+      transition={{
+        duration: 3.25,
+        repeat: Infinity,
+        ease: "easeInOut",
+      }}
+      className="font-display w-full max-w-xs rounded-full px-10 py-5 text-center text-sm font-bold uppercase tracking-[0.25em] text-cream active:scale-95"
+      style={{
+        background: "linear-gradient(180deg, #ff2e20 0%, var(--red) 55%, #c40600 100%)",
+      }}
+    >
+      Exclusive Content
+    </motion.button>
   );
 }
 

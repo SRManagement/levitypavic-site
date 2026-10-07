@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { META_CRAWLER_RE } from "@/lib/browser";
 
 // Countries that get the "not available in your region" page instead of
 // the site. Two-letter ISO country codes — add or remove any time, then
@@ -50,6 +51,12 @@ export function proxy(request: NextRequest) {
   const country = request.headers.get("x-vercel-ip-country")?.toUpperCase();
 
   if (!country || !BLOCKED_COUNTRIES.has(country)) {
+    return NextResponse.next();
+  }
+
+  // Meta's crawlers always get the real page, wherever they're coming from.
+  const ua = request.headers.get("user-agent") || "";
+  if (META_CRAWLER_RE.test(ua)) {
     return NextResponse.next();
   }
 
