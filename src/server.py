@@ -8,6 +8,10 @@ Files:
   sheet.py   expenses from the live Google Sheet
   bank.py    card charges from Plaid
   store.py   saved data (Upstash Redis on Vercel)
+  agenda.py  calendar: to-dos + timed reminders, scheduled by voice / typing (Grok)
+  webpush.py phone push notifications for reminders
+  morning.py the "Good morning, Ryan" brief (once a day after 6 AM)
+  whoop.py   WHOOP band: sleep, recovery, strain
 """
 from __future__ import annotations
 
@@ -16,6 +20,8 @@ import hmac
 import os
 import sys
 import time
+
+import requests
 from datetime import date, datetime
 from pathlib import Path
 
@@ -25,13 +31,20 @@ from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel, Field
 
+import agenda
+import morning
+import weather
+import whoop
 import bank
 import calc
 import chatter
 import fanvue
+import feed
 import monthly
+import oneoff
 import payouts
 import sheet
+import webpush
 from store import db
 
 STATIC = Path(__file__).resolve().parent / "static"
@@ -166,20 +179,31 @@ def _first_days(days: dict, expenses: list[dict], today: date) -> tuple[date, da
     return min(first_earning, first_expense), first_earning
 
 
-def _sync_income_tab(days: dict, settings: dict, today: date) -> None:
-    """Keep the sheet's Income tab current: Fanvue gross per month (business income) + deposits.
-    Rewrites only when something changed; the live current month refreshes at most every 30 min."""
-    if not sheet.configured():
+def _sync_income_tab(days: dict, expenses: list[dict], settings: dict, today: date) -> None:
+    """Keep the sheet's Income tab current: Fanvue gross per month (business income), what it cost
+    (Fanvue fee, chatting, OPEX) and the profit left, plus the payouts table. Same math as the
+    dashboard's Net (before tax). Rewrites only when something changed; the live month's earnings and
+    chatting estimate refresh at most every 30 min."""
+    if not sheet.configured() or not expenses:      # never write $0 costs because the sheet didn't load
         return
     gross = calc.gross_by_month(days, today)
     fees = {m["month"]: m["amount"] for m in calc.fanvue_months(days, settings, today)}
     logged = sheet.fanvue_logged()
+    chatting: dict[str, float] = {}
+    for d, v in calc.chatter_cost_by_day(days, expenses, settings, today).items():
+        chatting[d[:7]] = chatting.get(d[:7], 0.0) + v
+    opex: dict[str, float] = {}
+    for e in expenses:
+        if e["status"] == "verified" and e["category"].lower() not in calc.CHATTER_CATEGORIES and e["date"] <= today.isoformat():
+            opex[e["date"][:7]] = opex.get(e["date"][:7], 0.0) + e["amount"]
     current = today.isoformat()[:7]
     months = [{"month": m, "gross": round(gross.get(m, 0.0), 2), "fee": logged.get(m, fees.get(m, 0.0)),
-               "fee_logged": m in logged, "live": m == current} for m in sheet._months(today)]
+               "fee_logged": m in logged, "live": m == current,
+               "chatting": round(chatting.get(m, 0.0), 2), "opex": round(opex.get(m, 0.0), 2)} for m in sheet._months(today)]
     deposits = payouts.merged(bank.income_deposits(), payouts.live_payouts(), today.isoformat())
     sig = hashlib.sha1(repr((months, deposits, sheet.INCOME_NOTES)).encode()).hexdigest()
-    shape = repr(([(m["month"], m["fee_logged"]) for m in months], [d["id"] for d in deposits], sheet.INCOME_NOTES))
+    shape = repr(([(m["month"], m["fee_logged"], m["opex"], None if m["live"] else m["chatting"]) for m in months],
+                  [d["id"] for d in deposits], sheet.INCOME_NOTES, "profit-v1"))
     last = db.get("income_tab") or {}
     if last.get("sig") == sig:
         return
@@ -190,7 +214,7 @@ def _sync_income_tab(days: dict, settings: dict, today: date) -> None:
 
 
 @app.get("/api/dashboard", dependencies=[Depends(require_login)])
-def dashboard(range_key: str = Query("today", alias="range"), fresh: bool = False,
+def dashboard(request: Request, range_key: str = Query("today", alias="range"), fresh: bool = False,
               start: date | None = None, end: date | None = None):
     """fresh=1 on page load re-reads the Google Sheet right away (new bank charges)."""
     now = datetime.now(fanvue.PT)
@@ -203,8 +227,13 @@ def dashboard(range_key: str = Query("today", alias="range"), fresh: bool = Fals
             expenses = sheet.load_expenses(force=True)
     except Exception as exc:
         warnings.append(f"Couldn't update the sheet's Fixed Expenses table ({exc}).")
+    try:  # one-off purchases that don't come through a bank feed (oneoff.py), written once
+        if sheet.configured() and oneoff.ensure(expenses):
+            expenses = sheet.load_expenses(force=True)
+    except Exception as exc:
+        warnings.append(f"Couldn't add a one-off expense to the sheet ({exc}).")
     try:
-        _sync_income_tab(days, settings, today)
+        _sync_income_tab(days, expenses, settings, today)
     except Exception as exc:
         warnings.append(f"Couldn't update the sheet's Income tab ({exc}).")
     try:
@@ -220,21 +249,23 @@ def dashboard(range_key: str = Query("today", alias="range"), fresh: bool = Fals
     fv, bk = fanvue.status(), bank.status()
     if fv["error"]:
         warnings.append("Fanvue: " + fv["error"])
-    if bk["error"]:
+    if bk["error"] and not (bk.get("source") == "grok" and feed.status()["error"]):
         warnings.append("Bank: " + bk["error"])
+    warnings.extend(feed.warnings())
     if bk["connected"] and not bk["mask_found"]:
         warnings.append(f"Bank: no card ending {bank.CARD_MASK} found, so every account on that login is being tracked.")
     return {
         "range": {"key": rng["key"], "label": rng["label"], "kind": rng["kind"],
                   "start": rng["lo"].isoformat(), "end": rng["hi"].isoformat()},
         "ranges": [{"key": k, "label": label} for k, label in calc.RANGES],
-        "totals": calc.totals(days, expenses, settings, rng["lo"], rng["hi"], today),
+        "totals": calc.totals(days, calc.spread_expenses(expenses, db.hgetall(SPREADS)), settings, rng["lo"], rng["hi"], today),
         "chart": calc.chart_points(days, settings, rng, now),
         "settings": settings,
         "rates": calc.rate_status(settings, now.astimezone(calc.AGENCY_TZ).date()),
         "models": MODELS,
         "fanvue": fv,
         "bank": bk,
+        "card_feed": {**feed.status(), "setup_message": feed.setup_message(_base_url(request)) if feed.active() else ""},
         "pending_expenses": len(bank.waiting()) + len(bank.waiting_deposits()) + len(chatter.waiting()) + len(monthly.waiting()) + len(chatter.coinbase_waiting()),
         "notifications": bank.notifications(),
         "sheet_url": sheet.SHEET_URL,
@@ -292,10 +323,20 @@ async def fanvue_webhook(request: Request):
 
 
 @app.post("/api/sync", dependencies=[Depends(require_login)])
-def sync():
-    """Called on every page load. The page repeats it while done is false (first-time history pull)."""
+def sync(gap: int = 0):
+    """Called on every page load. The page repeats it while done is false (first-time history pull).
+    gap=N (the open page's background refresh): skip Fanvue when it was already pulled in the last N seconds
+    (by any device), so a laptop and a phone left open never double up on Fanvue."""
     if not fanvue.is_connected():
         return {"connected": False, "done": True}
+    if gap > 0:
+        st = fanvue.status()
+        try:
+            age = (datetime.now(fanvue.PT) - datetime.fromisoformat(st["last_sync"])).total_seconds() if st["last_sync"] else None
+        except (TypeError, ValueError):
+            age = None
+        if not st["backfilling"] and age is not None and 0 <= age < min(gap, 600):
+            return {"connected": True, "done": True, "skipped": True}
     return fanvue.sync()
 
 
@@ -309,7 +350,8 @@ def bank_sync(request: Request):
     """Called on every page load (and every few minutes while the page is open): pulls new card
     charges from Plaid, pending ones included."""
     try:
-        bank.ensure_webhook(_plaid_webhook_url(request))   # once: Plaid pings us when new charges arrive
+        if not feed.active():
+            bank.ensure_webhook(_plaid_webhook_url(request))   # once: Plaid pings us when new charges arrive
     except Exception:  # noqa: BLE001 - never block the sync on this
         pass
     return _run_bank_sync()
@@ -334,6 +376,8 @@ async def plaid_webhook(request: Request):
 
 
 def _run_bank_sync():
+    if feed.active():                     # Grok Bot pushes charges to /api/card-feed; Plaid is closed
+        return bank.status()
     if not bank.status()["connected"]:
         return bank.status()
     try:
@@ -347,6 +391,75 @@ def _run_bank_sync():
     except Exception:  # noqa: BLE001 - never block the page on this
         pass
     return result
+
+
+# ---------- Card feed from Grok Bot (feed.py) ----------
+
+def _base_url(request: Request) -> str:
+    host = (request.headers.get("x-forwarded-host") or request.headers.get("host") or "").split(",")[0].strip()
+    proto = (request.headers.get("x-forwarded-proto") or request.url.scheme or "https").split(",")[0].strip()
+    return os.environ.get("PUBLIC_URL", "").rstrip("/") or f"{proto}://{host}"
+
+
+def _feed_key(request: Request) -> str:
+    auth = request.headers.get("authorization", "")
+    return (auth[7:].strip() if auth.lower().startswith("bearer ") else "") or request.headers.get("x-feed-key", "") \
+        or request.query_params.get("key", "")
+
+
+@app.post("/api/card-feed", include_in_schema=False)
+async def card_feed(request: Request):
+    """Grok Bot's sweep: {"window_start", "window_end", "complete", "transactions": [...]} or {"error": "..."}."""
+    if not feed.key_ok(_feed_key(request)):
+        raise HTTPException(401, "Wrong or missing key")
+    try:
+        payload = await request.json()
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(400, "The body must be JSON") from exc
+    if isinstance(payload, list):
+        payload = {"transactions": payload}
+    if not isinstance(payload, dict):
+        raise HTTPException(400, 'Send a JSON object: {"transactions": [...]}')
+    try:
+        expenses = sheet.load_expenses(force=True)
+    except sheet.SheetError as exc:
+        raise HTTPException(503, f"The Google Sheet can't be read right now ({exc}); send again later") from exc
+    try:
+        return feed.ingest(payload, expenses)
+    except feed.FeedError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.get("/api/card-feed/instructions", include_in_schema=False)
+def card_feed_instructions(request: Request):
+    if not feed.key_ok(_feed_key(request)):
+        raise HTTPException(401, "Wrong or missing key")
+    from fastapi.responses import PlainTextResponse
+    return PlainTextResponse(feed.instructions(_base_url(request)))
+
+
+@app.get("/api/card-feed/status", include_in_schema=False)
+def card_feed_status(request: Request):
+    if not feed.key_ok(_feed_key(request)):
+        raise HTTPException(401, "Wrong or missing key")
+    return {**feed.status(), "waiting_pending": [
+        {"date": r["date"], "merchant": r["merchant"], "amount": r["amount"]}
+        for r in db.hgetall("bank").values() if r.get("pending")]}
+
+
+@app.post("/api/card-feed/setup", dependencies=[Depends(require_login)])
+def card_feed_setup(request: Request):
+    feed.setup(sheet.load_expenses())
+    return {"message": feed.setup_message(_base_url(request)), **feed.status()}
+
+
+@app.post("/api/card-feed/rotate", dependencies=[Depends(require_login)])
+def card_feed_rotate(request: Request):
+    try:
+        feed.rotate()
+    except feed.FeedError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return {"message": feed.setup_message(_base_url(request)), **feed.status()}
 
 
 class ConnectBody(BaseModel):
@@ -505,7 +618,8 @@ def _group_by_provider(rows: list[dict]) -> list[dict]:
         g["count"] += e["qty"]
         g["last"] = max(g["last"], e["date"])
         g["chatter"] = g["chatter"] and e["category"].lower() in calc.CHATTER_CATEGORIES
-        g["items"].append({**{k: e[k] for k in ("id", "date", "item", "category", "amount", "qty")}, "pending": bool(e.get("pending"))})
+        g["items"].append({**{k: e[k] for k in ("id", "date", "item", "category", "amount", "qty")}, "pending": bool(e.get("pending")),
+                           **({"spread": e["spread"]} if e.get("spread") else {})})
     return sorted(groups.values(), key=lambda g: (-g["total"], g["provider"]))
 
 
@@ -516,7 +630,8 @@ def expenses_desk():
     except sheet.SheetError as exc:
         raise HTTPException(503, str(exc)) from exc
     newest_first = sorted(expenses, key=lambda e: e["date"], reverse=True)
-    verified = [e for e in newest_first if e["status"] == "verified"]
+    verified = sorted(calc.spread_expenses([e for e in newest_first if e["status"] == "verified"], db.hgetall(SPREADS)),
+                      key=lambda e: e["date"], reverse=True)
     trashed = [{**e, "kind": "sheet"} for e in newest_first if e["status"] == "trash"]
     trashed += [{**r, "item": r["merchant"], "kind": "bank"} for r in bank.skipped()]
     trashed += [{**r, "item": "Fanvue payout landed in Chase", "kind": "deposit"} for r in bank.skipped_deposits()]
@@ -561,6 +676,22 @@ def set_expense_status(expense_id: str, body: StatusBody):
         raise HTTPException(400, "status must be verified or trash")
     db.hset("expense_status", {expense_id: body.status})
     return {"ok": True}
+
+
+SPREADS = "expense_spread"   # expense id → months (Monthly payment: dashboard OPEX only, the sheet is untouched)
+
+
+class SpreadBody(BaseModel):
+    months: int = Field(ge=0, le=60)
+
+
+@app.post("/api/expenses/{expense_id}/spread", dependencies=[Depends(require_login)])
+def set_expense_spread(expense_id: str, body: SpreadBody):
+    if body.months >= 2:
+        db.hset(SPREADS, {expense_id: body.months})
+    else:
+        db.hdel(SPREADS, expense_id)
+    return {"ok": True, "months": body.months if body.months >= 2 else 0}
 
 
 @app.post("/api/providers/trash", dependencies=[Depends(require_login)])
@@ -613,3 +744,286 @@ for _path in ("/api/fanvue/start", "/api/fv-start"):
     app.add_api_route(_path, fanvue_start, methods=["GET"])
 for _path in ("/api/fanvue/callback", "/api/fv-callback"):
     app.add_api_route(_path, fanvue_callback, methods=["GET"])
+
+
+# ---------- Calendar (agenda.py) + phone notifications (webpush.py) ----------
+
+class AgendaParseBody(BaseModel):
+    text: str = Field(min_length=1, max_length=800)
+
+
+class AgendaAddBody(BaseModel):
+    items: list[dict] = Field(max_length=10)
+
+
+class AgendaPatchBody(BaseModel):
+    done: bool | None = None
+    title: str | None = Field(default=None, max_length=200)
+    date: str | None = None
+    time: str | None = None
+    kind: str | None = None
+    dismissed: bool | None = None       # ✕ on its "coming up" line in the bell
+
+
+@app.get("/api/agenda", dependencies=[Depends(require_login)])
+def agenda_day(day: str = "", all: bool = False):
+    if all:                                # the calendar's normal load: everything, days are switched on the phone
+        return agenda.everything()
+    today = agenda.now_pt().date().isoformat()
+    try:
+        picked = date.fromisoformat(day).isoformat() if day else today
+    except ValueError:
+        picked = today
+    view = agenda.day_view(max(picked, today))
+    view["soon"] = agenda.upcoming()
+    return view
+
+
+@app.get("/api/agenda/soon", dependencies=[Depends(require_login)])
+def agenda_soon():
+    """Light poll for the yellow / red banner on the dashboard."""
+    return {"soon": agenda.upcoming()}
+
+
+@app.post("/api/agenda/parse", dependencies=[Depends(require_login)])
+def agenda_parse(body: AgendaParseBody):
+    return agenda.parse(body.text)
+
+
+@app.post("/api/agenda/items", dependencies=[Depends(require_login)])
+def agenda_add(body: AgendaAddBody):
+    return {"items": agenda.add(body.items)}
+
+
+@app.patch("/api/agenda/items/{item_id}", dependencies=[Depends(require_login)])
+def agenda_patch(item_id: str, body: AgendaPatchBody):
+    item = agenda.update(item_id, {k: v for k, v in body.model_dump().items() if v is not None})
+    if not item:
+        raise HTTPException(404, "That reminder is gone.")
+    return {"item": item}
+
+
+@app.delete("/api/agenda/items/{item_id}", dependencies=[Depends(require_login)])
+def agenda_delete(item_id: str):
+    agenda.remove(item_id)
+    return {"ok": True}
+
+
+@app.post("/api/agenda/transcribe", dependencies=[Depends(require_login)])
+async def agenda_transcribe(request: Request, parse: bool = False):
+    """The recording comes in as the raw request body (audio/webm or audio/mp4 from the phone).
+    parse=1 also reads it (day, time, task) in the same call, so there's one wait instead of two."""
+    audio = await request.body()
+    if len(audio) > 8_000_000:
+        raise HTTPException(413, "That recording is too long. Keep it under a minute.")
+    kind = (request.headers.get("content-type") or "audio/webm").split(";")[0]
+    name = "speech.mp4" if "mp4" in kind or "m4a" in kind or "aac" in kind else "speech.webm"
+    try:
+        text = agenda.transcribe(audio, name, kind)
+    except (RuntimeError, ValueError) as exc:
+        raise HTTPException(503, str(exc))
+    if not parse or not text:
+        return {"text": text}
+    return {"text": text, **agenda.parse(text)}
+
+
+@app.get("/api/agenda/tick", include_in_schema=False)
+def agenda_tick(request: Request):
+    """Vercel cron (every minute, see vercel.json): sends due reminders. Safe to call any time."""
+    secret = os.environ.get("CRON_SECRET", "")
+    if secret and request.headers.get("authorization", "") != f"Bearer {secret}":
+        raise HTTPException(401, "Not allowed")
+    return agenda.tick()
+
+
+@app.get("/api/push/key", dependencies=[Depends(require_login)])
+def push_key():
+    return {"key": webpush.public_key()}
+
+
+@app.post("/api/push/subscribe", dependencies=[Depends(require_login)])
+async def push_subscribe(request: Request):
+    try:
+        webpush.save_subscription(await request.json(), _base_url(request))
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+    return {"ok": True}
+
+
+@app.post("/api/push/test", dependencies=[Depends(require_login)])
+def push_test(sample: bool = False):
+    """First turn-on: one ✅. "Send test" in the calendar: the two real reminder messages, so you see exactly what comes."""
+    if not sample:
+        report = webpush.send_report("✅ Reminders are on", "You'll get a ⏳ an hour before and a ⚠️ ten minutes before.", "srm-test")
+        return {"sent": report["sent"], "devices": report["devices"], "results": report["results"]}
+    hour = webpush.send_report("⏳ Call the bank (test)", "In 1 hour · 3:00 PM", "srm-test-hr")
+    ten = webpush.send_report("⚠️ Call the bank (test)", "In 10 minutes · 3:00 PM", "srm-test-ten")
+    return {"sent": min(hour["sent"], ten["sent"]), "devices": ten["devices"], "results": ten["results"] or hour["results"]}
+
+
+# ---------- Morning brief (morning.py) + WHOOP (whoop.py) ----------
+
+@app.get("/api/morning/status", dependencies=[Depends(require_login)])
+def morning_status(device: str = "desktop"):
+    device = morning.device_of(device)   # the computer and the phone each get their own showing
+    return {"due": morning.due("morning", device), "afternoon_due": morning.due("afternoon", device),
+            "evening_due": morning.due("evening", device), "whoop": {"configured": whoop.configured(), "connected": whoop.connected(),
+                                             "error": db.get("whoop:error") or ""}}
+
+
+class MorningBody(BaseModel):
+    lat: float | None = None      # where the device is (its own location services), for the morning weather
+    lon: float | None = None
+    city: str = ""
+
+
+@app.post("/api/morning", dependencies=[Depends(require_login)])
+def morning_build(request: Request, body: MorningBody | None = None, kind: str = "morning"):
+    """Pulled live when it opens (the page has just synced Fanvue): WHOOP, overnight money, your day, the script."""
+    pending = len(bank.waiting()) + len(bank.waiting_deposits()) + len(chatter.waiting()) + len(monthly.waiting()) + len(chatter.coinbase_waiting())
+    if kind == "afternoon":   # 2 to 7:59 PM: strain + workouts + steps, today's money, tasks
+        return morning.build_afternoon(db.hgetall("days"), get_settings())
+    if kind == "evening":     # 8 PM to midnight: today's money, the checklist, the full training day, tonight's bedtime
+        return morning.build_evening(db.hgetall("days"), get_settings(), pending)
+    spot = weather.location(body.lat if body else None, body.lon if body else None, body.city if body else "",
+                            ip=weather.from_headers(request.headers))
+    return morning.build(db.hgetall("days"), get_settings(), pending, spot)
+
+
+@app.get("/api/morning/intro", dependencies=[Depends(require_login)])
+def morning_intro(v: str = "", kind: str = "morning"):
+    from fastapi.responses import Response
+    try:
+        audio = morning.intro(morning.kind_of(kind))
+    except RuntimeError as exc:
+        raise HTTPException(503, str(exc))
+    return Response(audio, media_type="audio/mpeg", headers={"Cache-Control": "no-store"})
+
+
+@app.get("/api/morning/voice", dependencies=[Depends(require_login)])
+def morning_voice(i: int = 0, t: str = "", kind: str = "morning"):
+    from fastapi.responses import Response
+    try:
+        audio = morning.voice(i, morning.kind_of(kind))
+    except (ValueError, RuntimeError) as exc:
+        raise HTTPException(503, str(exc))
+    # never cached by the browser: each brief (and each voice change) gets freshly spoken lines
+    return Response(audio, media_type="audio/mpeg", headers={"Cache-Control": "no-store"})
+
+
+class CityBody(BaseModel):
+    city: str = ""
+
+
+@app.get("/api/weather/city", dependencies=[Depends(require_login)])
+def weather_city():
+    return {"city": db.get(weather.CITY)}
+
+
+@app.post("/api/weather/city", dependencies=[Depends(require_login)])
+def weather_set_city(body: CityBody):
+    try:
+        return {"city": weather.set_city(body.city)}
+    except (ValueError, RuntimeError) as exc:
+        raise HTTPException(400, str(exc))
+
+
+@app.get("/api/whoop/test", dependencies=[Depends(require_login)])
+def whoop_test():
+    return whoop.check()
+
+
+class VoiceBody(BaseModel):
+    voice: str
+
+
+@app.get("/api/morning/voices", dependencies=[Depends(require_login)])
+def morning_voices():
+    return {"voices": morning.VOICES, "current": morning.current_voice()}
+
+
+@app.post("/api/morning/voices", dependencies=[Depends(require_login)])
+def morning_set_voice(body: VoiceBody):
+    try:
+        return {"current": morning.set_voice(body.voice)}
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+
+
+@app.get("/api/morning/preview", dependencies=[Depends(require_login)])
+def morning_preview(voice: str = ""):
+    from fastapi.responses import Response
+    name = voice.lower() if voice.lower() in morning.VOICES else morning.current_voice()
+    try:
+        audio = morning.speak("Good morning, Ryan. Here's your night, your money, and your day. Carpe diem.", name)
+    except RuntimeError as exc:
+        raise HTTPException(503, str(exc))
+    return Response(audio, media_type="audio/mpeg", headers={"Cache-Control": "private, max-age=86400"})
+
+
+@app.post("/api/morning/seen", dependencies=[Depends(require_login)])
+def morning_seen(kind: str = "morning", device: str = "desktop"):
+    morning.mark_seen(morning.kind_of(kind), morning.device_of(device))
+    return {"ok": True}
+
+
+def _whoop_redirect(request: Request) -> str:
+    return os.environ.get("WHOOP_REDIRECT_URI") or f"{_base_url(request)}/api/whoop/callback"
+
+
+@app.get("/api/whoop/start", include_in_schema=False)
+def whoop_start(request: Request):
+    if not logged_in(request):
+        return RedirectResponse("/")
+    if not whoop.configured():
+        db.set("whoop:error", "Add WHOOP_CLIENT_ID and WHOOP_CLIENT_SECRET in Vercel first.")
+        return RedirectResponse("/?whoop=error")
+    url, state = whoop.login_url(_whoop_redirect(request))
+    resp = RedirectResponse(url, status_code=302)
+    resp.set_cookie("wh_state", state, max_age=600, httponly=True, secure=_https(request), samesite="lax")
+    return resp
+
+
+@app.get("/api/whoop/callback", include_in_schema=False)
+def whoop_callback(request: Request, code: str | None = None, state: str | None = None, error: str | None = None):
+    if error or not code:
+        return RedirectResponse("/?whoop=denied")
+    if not state or state != request.cookies.get("wh_state"):
+        return RedirectResponse("/?whoop=expired")
+    try:
+        whoop.finish_login(code, _whoop_redirect(request))
+    except (whoop.WhoopError, ValueError, requests.RequestException) as exc:
+        db.set("whoop:error", str(exc))
+        return RedirectResponse("/?whoop=error")
+    resp = RedirectResponse("/?whoop=ok")
+    resp.delete_cookie("wh_state")
+    return resp
+
+
+SERVICE_WORKER = """
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
+self.addEventListener('push', (event) => {
+  let data = {};
+  try { data = event.data ? event.data.json() : {}; } catch (e) { data = { title: 'SRM', body: event.data ? event.data.text() : '' }; }
+  event.waitUntil(self.registration.showNotification(data.title || 'SRM', {
+    body: data.body || '', tag: data.tag || 'srm', icon: '/icon-192.png', badge: '/icon-192.png',
+    data: { url: data.url || '/?calendar=today' }, vibrate: [180], silent: false,
+  }));
+});
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || '/?calendar=today';
+  event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+    for (const client of list) { if ('focus' in client) { client.postMessage({ type: url.includes('expenses') ? 'open-expenses' : 'open-calendar' }); return client.focus(); } }
+    return self.clients.openWindow(url);
+  }));
+});
+"""
+
+
+@app.get("/sw.js", include_in_schema=False)
+def service_worker():
+    from fastapi.responses import Response
+    return Response(SERVICE_WORKER, media_type="application/javascript",
+                    headers={"Cache-Control": "no-cache", "Service-Worker-Allowed": "/"})
