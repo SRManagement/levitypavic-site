@@ -15,7 +15,7 @@ export function isInAppBrowser(): boolean {
 // block — so Meta sees exactly what visitors see. Used by both the page
 // (browser side) and src/proxy.ts (server side).
 export const META_CRAWLER_RE =
-  /facebookexternalhit|facebookcatalog|Facebot|meta-externalagent|meta-externalfetcher|meta-webindexer/i;
+  /facebookexternalhit|facebookcatalog|Facebot|meta-externalagent|meta-externalfetcher|meta-externalads|meta-webindexer/i;
 
 export function isMetaCrawler(): boolean {
   if (typeof navigator === "undefined") return false;
