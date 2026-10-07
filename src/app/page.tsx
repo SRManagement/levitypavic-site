@@ -1,10 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
 import AgeGate from "@/components/AgeGate";
 import ImageSlot from "@/components/ImageSlot";
+import HumanCheck from "@/components/HumanCheck";
 import { openExternal, isInAppBrowser } from "@/lib/browser";
+
+// Cloudflare Turnstile public key, set in Vercel as
+// NEXT_PUBLIC_TURNSTILE_SITE_KEY. While it's empty the bot check is simply
+// skipped and the site behaves exactly as it did before.
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
 
 type Platform = "fanvue" | "instagram" | "tiktok" | "snapchat" | "telegram";
 
@@ -48,14 +54,22 @@ export default function Home() {
   const [revealed, setRevealed] = useState(false);
   const [inApp, setInApp] = useState(false);
   const [checkedInApp, setCheckedInApp] = useState(false);
+  const [human, setHuman] = useState(!TURNSTILE_SITE_KEY);
 
   useEffect(() => {
-    trackPageview();
+    const inAppNow = isInAppBrowser();
+    setInApp(inAppNow);
+    setCheckedInApp(true);
+    // Instagram/in-app visitors are counted right away, same as before.
+    // Everyone else is counted once they pass the bot check, so automated
+    // traffic stays out of your stats. With no Turnstile key set, everyone
+    // is counted immediately like before.
+    if (inAppNow || !TURNSTILE_SITE_KEY) trackPageview();
   }, []);
 
-  useEffect(() => {
-    setInApp(isInAppBrowser());
-    setCheckedInApp(true);
+  const handleHumanPass = useCallback(() => {
+    trackPageview();
+    setHuman(true);
   }, []);
 
   function goSocial(platform: Exclude<Platform, "fanvue">) {
@@ -97,7 +111,14 @@ export default function Home() {
           no more in-app-specific branching needed there. */}
       {checkedInApp && inApp && <ExitInstagramGate />}
 
-      {checkedInApp && !inApp && showIntro && (
+      {/* Bot check — real browsers only (in-app visitors are already
+          stuck behind the gate above). Solid black, same as the mask, so
+          a fast check is invisible and goes straight into the intro. */}
+      {checkedInApp && !inApp && !human && (
+        <HumanCheck siteKey={TURNSTILE_SITE_KEY} onPass={handleHumanPass} />
+      )}
+
+      {checkedInApp && !inApp && human && showIntro && (
         <IntroSequence
           onReveal={() => setRevealed(true)}
           onDone={() => setShowIntro(false)}
@@ -371,15 +392,15 @@ function PrimaryButton({ onClick }: { onClick: () => void }) {
       <motion.button
         onClick={onClick}
         animate={{
-          scale: [1, 1.035, 1],
+          scale: [1, 1.028, 1],
           boxShadow: [
-            "0 0 0px 0px rgba(255,8,0,0.0), 0 4px 18px rgba(255,8,0,0.25)",
-            "0 0 28px 6px rgba(255,8,0,0.55), 0 4px 18px rgba(255,8,0,0.25)",
-            "0 0 0px 0px rgba(255,8,0,0.0), 0 4px 18px rgba(255,8,0,0.25)",
+            "0 0 0px 0px rgba(255,8,0,0.0), 0 4px 14px rgba(255,8,0,0.2)",
+            "0 0 22px 5px rgba(255,8,0,0.44), 0 4px 14px rgba(255,8,0,0.2)",
+            "0 0 0px 0px rgba(255,8,0,0.0), 0 4px 14px rgba(255,8,0,0.2)",
           ],
         }}
         transition={{
-          duration: 2.6,
+          duration: 3.25,
           repeat: Infinity,
           ease: "easeInOut",
         }}
