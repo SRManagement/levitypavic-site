@@ -1,16 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
 import AgeGate from "@/components/AgeGate";
 import ImageSlot from "@/components/ImageSlot";
-import HumanCheck from "@/components/HumanCheck";
 import { openExternal, isInAppBrowser, isMetaCrawler } from "@/lib/browser";
-
-// Cloudflare Turnstile public key, set in Vercel as
-// NEXT_PUBLIC_TURNSTILE_SITE_KEY. While it's empty the bot check is simply
-// skipped and the site behaves exactly as it did before.
-const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
 
 type Platform = "fanvue" | "instagram" | "tiktok" | "snapchat" | "telegram";
 
@@ -54,29 +48,13 @@ export default function Home() {
   const [revealed, setRevealed] = useState(false);
   const [inApp, setInApp] = useState(false);
   const [checkedInApp, setCheckedInApp] = useState(false);
-  const [human, setHuman] = useState(!TURNSTILE_SITE_KEY);
 
   useEffect(() => {
-    const inAppNow = isInAppBrowser();
-    setInApp(inAppNow);
+    setInApp(isInAppBrowser());
     setCheckedInApp(true);
-    // Meta's crawlers skip the bot check and see the real page, exactly
-    // like a visitor would — so nothing here can look like cloaking. They
-    // aren't counted as views either.
-    if (isMetaCrawler()) {
-      setHuman(true);
-      return;
-    }
-    // Instagram/in-app visitors are counted right away, same as before.
-    // Everyone else is counted once they pass the bot check, so automated
-    // traffic stays out of your stats. With no Turnstile key set, everyone
-    // is counted immediately like before.
-    if (inAppNow || !TURNSTILE_SITE_KEY) trackPageview();
-  }, []);
-
-  const handleHumanPass = useCallback(() => {
-    trackPageview();
-    setHuman(true);
+    // Meta's crawlers (link previews, link checks) see the page like
+    // anyone else, but aren't counted as views.
+    if (!isMetaCrawler()) trackPageview();
   }, []);
 
   function goSocial(platform: Exclude<Platform, "fanvue">) {
@@ -118,14 +96,7 @@ export default function Home() {
           no more in-app-specific branching needed there. */}
       {checkedInApp && inApp && <ExitInstagramGate />}
 
-      {/* Bot check — real browsers only (in-app visitors are already
-          stuck behind the gate above). Solid black, same as the mask, so
-          a fast check is invisible and goes straight into the intro. */}
-      {checkedInApp && !inApp && !human && (
-        <HumanCheck siteKey={TURNSTILE_SITE_KEY} onPass={handleHumanPass} />
-      )}
-
-      {checkedInApp && !inApp && human && showIntro && (
+      {checkedInApp && !inApp && showIntro && (
         <IntroSequence
           onReveal={() => setRevealed(true)}
           onDone={() => setShowIntro(false)}
